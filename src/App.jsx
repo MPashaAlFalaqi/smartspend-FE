@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, Link } from 'react-router-dom'
 import Register from './pages/Register'
+import ForgotPassword from "./pages/forgotPassword";
 
 function Login() {
   const navigate = useNavigate()
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </BrowserRouter>
   )
