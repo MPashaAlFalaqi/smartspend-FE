@@ -89,11 +89,12 @@ export default function Login() {
           </div>
 
           {/* Lupa Password */}
-          <div style={styles.forgotRow}>
-            <a href="/forgot-password" style={styles.forgotLink}>
-              Lupa Password?
-            </a>
-          </div>
+          <p 
+  onClick={() => navigate("/forgot-password")} 
+  style={{ cursor: "pointer", color: "#7a0c0c" }}
+>
+  Lupa Password?
+</p>
 
           {/* Tombol Login */}
           <button type="submit" style={styles.loginBtn}>
