@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, Link } from 'react-router-dom'
 import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
+import RiskProfile from './pages/RiskProfile'
 
 function Login() {
   const navigate = useNavigate()
@@ -57,16 +59,6 @@ function Login() {
   )
 }
 
-function Dashboard() {
-  const navigate = useNavigate()
-  return (
-    <div style={{ padding: '32px', textAlign: 'center' }}>
-      <h1 style={{ color: '#6B0F1A' }}>Dashboard SmartSpend 🎉</h1>
-      <button onClick={() => navigate('/')} style={{ marginTop: '16px', padding: '10px 24px', backgroundColor: '#6B0F1A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Logout</button>
-    </div>
-  )
-}
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -75,6 +67,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/risk-profile" element={<RiskProfile />} />
       </Routes>
     </BrowserRouter>
   )
