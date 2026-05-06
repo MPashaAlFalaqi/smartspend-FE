@@ -74,6 +74,8 @@ logo: {
   color: "#ecb009",
   margin: 0,
   fontWeight: "bold",
+  position:"relative",
+  left:"-500px",
 },
   container: {
     height: "100vh",
