@@ -97,9 +97,7 @@ export default function Dashboard() {
                   <div className="dropdown-item" onClick={() => { navigate('/user-profile'); setShowDropdown(false) }}>
                     <span>👤</span> Profil Saya
                   </div>
-                  <div className="dropdown-item" onClick={() => { navigate('/history'); setShowDropdown(false) }}>
-                    <span>🕐</span> Riwayat Transaksi
-                  </div>
+                  
                   <div style={{ borderTop:'1px solid #F3F4F6', marginTop:'4px', paddingTop:'4px' }}>
                     <div className="dropdown-item" onClick={() => { setShowDropdown(false); setShowLogoutModal(true) }} style={{ color:RED }}>
                       <span>🚪</span> Keluar

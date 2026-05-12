@@ -57,14 +57,19 @@ export default function RiskProfile() {
   }
 
   const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!form.nama || !form.usia || !form.pekerjaan || !form.status || !form.penghasilan) {
-      setError('Harap lengkapi semua data sebelum melanjutkan.')
-      return
-    }
-    const kategori = tentukanKategori(form.penghasilan)
-    setHasil(kategori)
+  e.preventDefault()
+  if (!form.nama || !form.usia || !form.pekerjaan || !form.status || !form.penghasilan) {
+    setError('Harap lengkapi semua data sebelum melanjutkan.')
+    return
   }
+  
+  // Simpan penghasilan ke localStorage ← TAMBAH INI
+  localStorage.setItem('penghasilan', form.penghasilan)
+  localStorage.setItem('namaUser', form.nama)
+
+  const kategori = tentukanKategori(form.penghasilan)
+  setHasil(kategori)
+}
 
   return (
     <>
@@ -235,32 +240,7 @@ export default function RiskProfile() {
                 ))}
               </div>
 
-              {/* Hasil Analisis */}
-              <div style={{ backgroundColor:'white', borderRadius:'16px', padding:'32px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', marginBottom:'20px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'24px', paddingBottom:'16px', borderBottom:'1px solid #F3F4F6' }}>
-                  <div style={{ width:'10px', height:'10px', backgroundColor:GOLD, borderRadius:'50%' }}/>
-                  <h2 style={{ fontSize:'20px', fontWeight:'700', color:MAROON }}>Hasil Analisis Risiko</h2>
-                </div>
-
-                {Object.entries(kategoriInfo).map(([key, info]) => (
-                  <div key={key} style={{
-                    backgroundColor: hasil === key ? info.bg : '#F9F9F9',
-                    border: hasil === key ? `1.5px solid ${info.color}` : '1.5px solid transparent',
-                    borderRadius:'12px', padding:'20px', marginBottom:'12px',
-                    transition:'all 0.3s'
-                  }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px' }}>
-                      <span style={{ fontSize:'18px' }}>{info.icon}</span>
-                      <h3 style={{ fontSize:'15px', fontWeight:'700', color: hasil === key ? info.color : '#9CA3AF' }}>{info.label}</h3>
-                      {hasil === key && (
-                        <span style={{ marginLeft:'auto', backgroundColor:info.color, color:'white', fontSize:'11px', fontWeight:'600', padding:'3px 10px', borderRadius:'20px' }}>Profil Kamu</span>
-                      )}
-                    </div>
-                    <p style={{ fontSize:'13px', color: hasil === key ? '#374151' : '#9CA3AF', lineHeight:'1.6' }}>{info.desc}</p>
-                  </div>
-                ))}
-              </div>
-
+              
               {/* Buttons */}
               <div style={{ display:'flex', gap:'12px' }}>
                 <button

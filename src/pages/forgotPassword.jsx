@@ -1,146 +1,143 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+
+const MAROON = '#6B0F1A'
+const GOLD = '#C9A84C'
 
 export default function ForgotPassword() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-
+    e.preventDefault()
     if (!email) {
-      alert("Email wajib diisi!");
-      return;
+      setError('Email wajib diisi!')
+      return
     }
-
-    // nanti ini connect ke backend
-    console.log("Kirim reset ke:", email);
-
-    alert("Link reset password berhasil dikirim!");
-  };
+    navigate('/reset-password')
+  }
 
   return (
-    <div style={styles.navbar}>
-      <h2 style={styles.logo}>SmartSpend</h2>
-    <div style={styles.container}>
-      <div style={styles.card}>
-        
-        {/* ICON */}
-        <div style={styles.icon}>🔒</div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+        input:focus { border-color:${MAROON} !important; outline:none; }
+      `}</style>
 
-        {/* TITLE */}
-        <h2 style={styles.title}>Lupa Password?</h2>
-        <p style={styles.desc}>
-          Masukkan email kamu dan kami akan mengirimkan link untuk mereset password.
-        </p>
+      <div style={{
+        minHeight:'100vh',
+        width:'100vw',
+        backgroundColor:MAROON,
+        display:'flex',
+        alignItems:'center',
+        justifyContent:'center',
+        padding:'20px',
+      }}>
+        <div style={{
+          backgroundColor:'#FFFFFF',
+          borderRadius:'20px',
+          padding:'48px 40px',
+          width:'100%',
+          maxWidth:'440px',
+          boxShadow:'0 20px 60px rgba(0,0,0,0.3)',
+          textAlign:'center',
+        }}>
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit}>
-          <label style={styles.label}>Alamat Email</label>
-          <input
-            type="email"
-            placeholder="contoh@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-          />
+          {/* Icon */}
+          <div style={{
+            width:'72px', height:'72px',
+            backgroundColor:'#FFF3E0',
+            borderRadius:'50%',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            margin:'0 auto 20px',
+          }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill={GOLD}>
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+            </svg>
+          </div>
 
-          <button type="submit" style={styles.button}>
-            Kirim Link Reset
-          </button>
-        </form>
+          {/* Title */}
+          <h1 style={{
+            color:MAROON, fontSize:'26px',
+            fontWeight:'700', margin:'0 0 10px',
+          }}>
+            Lupa Password?
+          </h1>
+          <p style={{
+            color:'#6B7280', fontSize:'14px',
+            lineHeight:'1.6', margin:'0 0 32px',
+          }}>
+            Masukkan email kamu dan kami akan mengirimkan link untuk mereset password.
+          </p>
 
-        {/* BACK */}
-        <p style={styles.back} onClick={() => navigate("/login")}>
-          ← Kembali ke Login
-        </p>
+          {/* Error */}
+          {error && (
+            <div style={{
+              backgroundColor:'#FEF2F2',
+              borderLeft:'4px solid #C0392B',
+              borderRadius:'8px',
+              padding:'12px 16px',
+              marginBottom:'16px',
+              color:'#C0392B',
+              fontSize:'13px',
+              textAlign:'left',
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            <div style={{ textAlign:'left', marginBottom:'20px' }}>
+              <label style={{
+                fontSize:'13px', fontWeight:'600',
+                display:'block', marginBottom:'8px',
+                color:'#374151', letterSpacing:'0.3px',
+              }}>
+                ALAMAT EMAIL
+              </label>
+              <input
+                type="email"
+                placeholder="contoh@email.com"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError('') }}
+                style={{
+                  width:'100%', height:'48px',
+                  padding:'0 16px',
+                  border:'1.5px solid #E5E7EB',
+                  borderRadius:'10px', fontSize:'14px',
+                  boxSizing:'border-box',
+                  backgroundColor:'#FAFAFA',
+                  color:'#1A1A1A',
+                }}
+              />
+            </div>
+
+            <button type="submit" style={{
+              width:'100%', height:'52px',
+              backgroundColor:MAROON, color:'#fff',
+              border:'none', borderRadius:'12px',
+              fontSize:'15px', fontWeight:'600',
+              cursor:'pointer', marginBottom:'20px',
+              boxShadow:'0 4px 15px rgba(107,15,26,0.3)',
+              fontFamily:'Poppins,sans-serif',
+            }}>
+              Kirim Link Reset
+            </button>
+          </form>
+
+          {/* Kembali */}
+          <Link to="/" style={{
+            color:GOLD, fontSize:'14px',
+            fontWeight:'500', textDecoration:'none',
+          }}>
+            ← Kembali ke Login
+          </Link>
+
+        </div>
       </div>
-    </div>
-    </div>
-  );
+    </>
+  )
 }
-
-const styles = {
-  navbar: {
-  width: "100%",
-  backgroundColor: "#7a0c0c",
-  padding: "15px 30px",
-  position: "fixed",
-  top: 0,
-  left: 0,
-},
-
-logo: {
-  color: "#ecb009",
-  margin: 0,
-  fontWeight: "bold",
-  position:"relative",
-  left:"-500px",
-},
-  container: {
-    height: "100vh",
-    backgroundColor: "#fcfaf7",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-     paddingTop: "80px",
-  },
-
-  card: {
-    width: "350px",
-    backgroundColor: "#fff",
-    padding: "30px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-    textAlign: "center",
-  },
-
-  icon: {
-    fontSize: "30px",
-    marginBottom: "10px",
-  },
-
-  title: {
-    color: "#7a0c0c",
-    marginBottom: "10px",
-  },
-
-  desc: {
-    fontSize: "14px",
-    color: "#666",
-    marginBottom: "20px",
-  },
-
-  label: {
-    display: "block",
-    textAlign: "left",
-    marginBottom: "5px",
-    fontSize: "14px",
-  },
-
-  input: {
-    width: "100%",
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    marginBottom: "15px",
-  },
-
-  button: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "#7a0c0c",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-
-  back: {
-    marginTop: "15px",
-    color: "#f5d51e",
-    cursor: "pointer",
-    fontSize: "14px",
-  },
-};
