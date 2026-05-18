@@ -33,14 +33,14 @@ function Login() {
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
   e.preventDefault()
   if (!email || !pass) {
     setError('Email dan password wajib diisi!')
     return
   }
 
-  // Cek admin
+  // Cek admin lokal
   if (email === 'admin@smartspend.com' && pass === 'admin123') {
     localStorage.setItem('role', 'admin')
     localStorage.setItem('namaUser', 'Admin')
@@ -48,9 +48,31 @@ function Login() {
     return
   }
 
-  // User biasa
-  localStorage.setItem('role', 'user')
-  navigate('/dashboard')
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ email, password: pass })
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      // Simpan token & data user
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('namaUser', data.user.nama)
+      localStorage.setItem('role', data.user.role)
+      navigate('/dashboard')
+    } else {
+      setError(data.message || 'Email atau password salah!')
+    }
+
+  } catch (error) {
+    setError('Gagal terhubung ke server. Pastikan backend jalan!')
+  }
 }
   return (
     <>

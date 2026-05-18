@@ -11,6 +11,7 @@ export default function Register() {
   })
   const [passwordStrength, setPasswordStrength] = useState(0)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -27,20 +28,47 @@ export default function Register() {
   const strengthLabel = ['', 'Lemah', 'Cukup', 'Sedang', 'Kuat']
   const strengthColor = ['', '#C0392B', '#E67E22', '#F1C40F', '#2D6A4F']
 
-  const handleRegister = (e) => {
-    e.preventDefault()
-    if (!formData.nama || !formData.email || !formData.password || !formData.konfirmasi) {
-      setError('Semua field wajib diisi!'); return
-    }
-    if (formData.password !== formData.konfirmasi) {
-      setError('Password dan konfirmasi tidak cocok!'); return
-    }
-    if (!formData.setuju) {
-      setError('Kamu harus menyetujui Syarat & Ketentuan!'); return
-    }
-    navigate('/dashboard')
+  const handleSubmit = async (e) => {
+  e.preventDefault()
+
+  if (!formData.nama || !formData.email || !formData.password || !formData.konfirmasi) {
+    setError('Semua field wajib diisi!')
+    return
+  }
+  if (formData.password !== formData.konfirmasi) {
+    setError('Password tidak cocok!')
+    return
+  }
+  if (!formData.setuju) {
+    setError('Setujui Syarat & Ketentuan!')
+    return
   }
 
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        nama: formData.nama,
+        email: formData.email,
+        password: formData.password,
+      })
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+  setSuccess('Registrasi berhasil! Mengarahkan ke halaman login...')
+  setTimeout(() => navigate('/'), 2000)
+}
+
+  } catch (err) {
+    setError('Gagal terhubung ke server!')
+  }
+}
   const inputStyle = {
     width: '100%',
     height: '48px',
@@ -190,9 +218,26 @@ export default function Register() {
                 ⚠️ {error}
               </div>
             )}
+            {success && (
+  <div style={{
+    backgroundColor:'#F0FDF4',
+    border:'1px solid #BBF7D0',
+    borderLeft:'4px solid #2D6A4F',
+    borderRadius:'10px',
+    padding:'12px 16px',
+    marginBottom:'16px',
+    color:'#2D6A4F',
+    fontSize:'13px',
+    fontWeight:'500',
+    display:'flex',
+    alignItems:'center',
+    gap:'8px',
+  }}>
+    ✅ {success}
+  </div>
+)}
 
-            <form onSubmit={handleRegister}>
-
+           <form onSubmit={handleSubmit}>
               {/* Nama */}
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
