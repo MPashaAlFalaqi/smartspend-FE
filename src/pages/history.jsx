@@ -19,25 +19,21 @@ const transaksiData = [
 ]
 
 const bulanList = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
-const kategoriList = ['Semua Kategori','Gaji','Belanja','Transportasi','Hiburan','Makanan','Tagihan','Transfer']
 
 export default function History() {
   const navigate = useNavigate()
   const [filterBulan, setFilterBulan] = useState('April 2025')
-  const [filterKategori, setFilterKategori] = useState('Semua Kategori')
   const [filterTipe, setFilterTipe] = useState('Semua')
   const [search, setSearch] = useState('')
   const [showMore, setShowMore] = useState(false)
   const [showBulan, setShowBulan] = useState(false)
-  const [showKategori, setShowKategori] = useState(false)
 
   const formatRp = (val) => parseInt(val).toLocaleString('id-ID')
 
   const filtered = transaksiData.filter(t => {
-    const matchKategori = filterKategori === 'Semua Kategori' || t.kategori === filterKategori
     const matchTipe = filterTipe === 'Semua' || t.tipe === filterTipe
     const matchSearch = t.nama.toLowerCase().includes(search.toLowerCase()) || t.kategori.toLowerCase().includes(search.toLowerCase())
-    return matchKategori && matchTipe && matchSearch
+    return matchTipe && matchSearch
   })
 
   const displayed = showMore ? filtered : filtered.slice(0, 6)
@@ -119,29 +115,6 @@ export default function History() {
               )}
             </div>
 
-            {/* Dropdown Kategori */}
-            <div style={{ position:'relative' }}>
-              <div
-                onClick={() => { setShowKategori(!showKategori); setShowBulan(false) }}
-                style={{ display:'flex', alignItems:'center', gap:'8px', height:'44px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', cursor:'pointer', backgroundColor:'white', minWidth:'190px' }}
-              >
-                <span style={{ fontSize:'16px' }}>🏷️</span>
-                <span style={{ fontSize:'14px', fontWeight:'500', color:'#1A1A1A', flex:1 }}>{filterKategori}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#9CA3AF"><path d="M7 10l5 5 5-5z"/></svg>
-              </div>
-              {showKategori && (
-                <div style={{ position:'absolute', top:'50px', left:0, backgroundColor:'white', borderRadius:'12px', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', width:'200px', zIndex:200, padding:'8px' }}>
-                  {kategoriList.map(k => (
-                    <div key={k} className="dropdown-opt"
-                      onClick={() => { setFilterKategori(k); setShowKategori(false) }}
-                      style={{ padding:'10px 14px', fontSize:'14px', cursor:'pointer', borderRadius:'8px', color: filterKategori===k ? MAROON : '#1A1A1A', fontWeight: filterKategori===k ? '600' : '400' }}
-                    >
-                      {k}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {/* Toggle Tipe */}
             <div style={{ backgroundColor:'#F3F4F6', borderRadius:'10px', padding:'4px', display:'flex', gap:'4px' }}>

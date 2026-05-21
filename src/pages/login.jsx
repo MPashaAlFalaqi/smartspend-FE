@@ -20,13 +20,11 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault()
 
-    // Validasi sederhana
     if (!formData.email || !formData.password) {
       setError('Email dan password wajib diisi!')
       return
     }
 
-    // Nanti diganti dengan API call ke Laravel
     console.log('Login dengan:', formData)
     navigate('/dashboard')
   }
@@ -78,23 +76,26 @@ export default function Login() {
                 onChange={handleChange}
                 style={styles.inputPassword}
               />
+              {/* Tombol Mata yang disesuaikan style-nya seperti UserProfile */}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={styles.eyeBtn}
               >
-                {showPassword ? '🙈' : '👁️'}
+              
               </button>
             </div>
           </div>
 
           {/* Lupa Password */}
-          <p 
-  onClick={() => navigate("/forgot-password")} 
-  style={{ cursor: "pointer", color: "#7a0c0c" }}
->
-  Lupa Password?
-</p>
+          <div style={styles.forgotRow}>
+            <span 
+              onClick={() => navigate("/forgot-password")} 
+              style={styles.forgotLink}
+            >
+              Lupa Password?
+            </span>
+          </div>
 
           {/* Tombol Login */}
           <button type="submit" style={styles.loginBtn}>
@@ -197,7 +198,7 @@ const styles = {
   inputPassword: {
     width: '100%',
     height: '48px',
-    padding: '0 48px 0 16px',
+    padding: '0 130px 0 16px', // Diperlebar agar teks tombol tidak menimpa password
     border: '1.5px solid #D1D5DB',
     borderRadius: '10px',
     fontSize: '14px',
@@ -207,22 +208,29 @@ const styles = {
   },
   eyeBtn: {
     position: 'absolute',
-    right: '12px',
+    right: '14px',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '18px',
-    padding: '0',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6B7280',
+    padding: '4px 8px',
+    fontFamily: 'Inter, sans-serif',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
   },
   forgotRow: {
     textAlign: 'right',
-    marginTop: '-8px',
+    marginTop: '4px',
   },
   forgotLink: {
     fontSize: '13px',
     color: '#6B0F1A',
     textDecoration: 'none',
-    fontWeight: '500',
+    fontWeight: '600',
+    cursor: 'pointer',
   },
   loginBtn: {
     width: '100%',

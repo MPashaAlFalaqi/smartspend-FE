@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
 const MAROON = '#6B0F1A'
@@ -9,25 +8,19 @@ const RED = '#C0392B'
 
 export default function FinalAnalyze() {
   const navigate = useNavigate()
-  const [notifAktif, setNotifAktif] = useState(false)
-  const [showAlert, setShowAlert] = useState(true)
 
-  const penghasilan = parseInt(localStorage.getItem('penghasilan') || '3000000')
-  const namaUser = localStorage.getItem('namaUser') || 'Pengguna'
+  // ===== AMBIL HASIL ANALISIS DARI BUDGET PLANNER =====
+  const penghasilan      = parseInt(localStorage.getItem('analisis_pemasukan')   || localStorage.getItem('penghasilan') || '3000000')
+  const totalPengeluaran = parseInt(localStorage.getItem('analisis_pengeluaran') || '0')
+  const tabungan         = parseInt(localStorage.getItem('analisis_tabungan')    || '0')
+  const persen           = parseInt(localStorage.getItem('analisis_persen')      || '0')
+  const kategori         = localStorage.getItem('analisis_kategori')             || 'konservatif'
+  const pesanAnalisis    = localStorage.getItem('analisis_pesan')                || ''
+  const namaUser         = localStorage.getItem('namaUser')                      || 'Pengguna'
 
   const formatRp = (val) => parseInt(val||0).toLocaleString('id-ID')
 
-  const totalPengeluaran = Math.round(penghasilan * 0.93)
-  const tabungan = penghasilan - totalPengeluaran
-  const persen = Math.round((totalPengeluaran / penghasilan) * 100)
-
-  const tentukanKategori = () => {
-    if (penghasilan >= 10000000) return 'agresif'
-    if (penghasilan >= 5000000) return 'moderat'
-    return 'konservatif'
-  }
-  const kategori = tentukanKategori()
-
+  // Data Base Info Kategori Struktural
   const kategoriInfo = {
     konservatif: {
       label: 'Risiko Konservatif',
@@ -51,6 +44,42 @@ export default function FinalAnalyze() {
       desc: 'Kamu telah melewati batas anggaran sebesar 27% dari total budget bulan ini. Pertimbangkan untuk menekan pengeluaran non-prioritas agar keuangan tetap terkendali.'
     }
   }
+
+  // ===== PERINTAH TAMBAHAN: UPDATE SUMMARY CARDS DENGAN DATA REAL =====
+  const summaryCards = [
+    {
+      label: 'TOTAL PEMASUKAN',
+      value: `Rp ${formatRp(penghasilan)}`,
+      sub: 'Bulan ini',
+      color: MAROON,
+      subColor: '#9CA3AF',
+      badge: false
+    },
+    {
+      label: 'TOTAL PENGELUARAN',
+      value: `Rp ${formatRp(totalPengeluaran)}`,
+      sub: `${persen}% terpakai`,
+      color: RED,
+      subColor: GOLD,
+      badge: true
+    },
+    {
+      label: 'TABUNGAN BULAN INI',
+      value: `Rp ${formatRp(tabungan)}`,
+      sub: tabungan < penghasilan * 0.2 ? 'Di bawah target' : 'Sesuai target',
+      color: GREEN,
+      subColor: GOLD,
+      badge: true
+    },
+    {
+      label: 'PROFIL RISIKO',
+      value: kategori.charAt(0).toUpperCase() + kategori.slice(1),
+      sub: 'Berdasarkan pengeluaran',
+      color: MAROON,
+      subColor: '#9CA3AF',
+      badge: false
+    },
+  ]
 
   return (
     <>
@@ -91,14 +120,9 @@ export default function FinalAnalyze() {
 
         <div style={{ maxWidth:'1100px', margin:'0 auto', padding:'32px' }}>
 
-          {/* SUMMARY CARDS */}
+          {/* RENDER SUMMARY CARDS DATA REAL */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'24px' }}>
-            {[
-              { label:'TOTAL PEMASUKAN', value:`Rp ${formatRp(penghasilan)}`, sub:'Bulan ini', color:MAROON, subColor:'#9CA3AF' },
-              { label:'TOTAL PENGELUARAN', value:`Rp ${formatRp(totalPengeluaran)}`, sub:'95% terpakai', color:RED, subColor:GOLD, badge:true },
-              { label:'TABUNGAN BULAN INI', value:`Rp ${formatRp(tabungan)}`, sub:'Di bawah target', color:GREEN, subColor:GOLD, badge:true },
-              { label:'PROFIL RISIKO', value: kategori.charAt(0).toUpperCase() + kategori.slice(1), sub:'Tetap stabil bulan ini', color:MAROON, subColor:'#9CA3AF' },
-            ].map((item,i) => (
+            {summaryCards.map((item, i) => (
               <div key={i} style={{ backgroundColor:'white', borderRadius:'14px', padding:'20px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' }}>
                 <p style={{ fontSize:'11px', color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'10px', fontWeight:'600' }}>{item.label}</p>
                 <p style={{ fontSize:'22px', fontWeight:'700', color:item.color, marginBottom:'8px' }}>{item.value}</p>
@@ -136,73 +160,12 @@ export default function FinalAnalyze() {
                     </span>
                   )}
                 </div>
+                {/* ===== PERINTAH TAMBAHAN: DESKRIPSI TERNARY DENGAN PESAN BUDGET PLANNER ===== */}
                 <p style={{ fontSize:'13px', color: kategori===key ? '#374151' : '#9CA3AF', lineHeight:'1.6' }}>
-                  {info.desc}
+                  {kategori===key ? pesanAnalisis : info.desc}
                 </p>
               </div>
             ))}
-          </div>
-
-          {/* SPENDING ALERT */}
-          <div style={{ backgroundColor:'white', borderRadius:'16px', padding:'32px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'24px', paddingBottom:'16px', borderBottom:'1px solid #F3F4F6' }}>
-              <div style={{ width:'10px', height:'10px', backgroundColor:GOLD, borderRadius:'50%' }}/>
-              <h2 style={{ fontSize:'20px', fontWeight:'700', color:MAROON }}>Spending Alert</h2>
-            </div>
-
-            {!notifAktif ? (
-              <div style={{ border:`1.5px solid ${GOLD}`, borderRadius:'12px', padding:'24px' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', gap:'16px' }}>
-                  <div style={{ width:'52px', height:'52px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'24px' }}>
-                    🔔
-                  </div>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontWeight:'700', fontSize:'16px', color:MAROON, marginBottom:'8px' }}>
-                      Aktifkan Notifikasi Overspending
-                    </p>
-                    <p style={{ fontSize:'14px', color:'#6B7280', lineHeight:'1.7', marginBottom:'20px' }}>
-                      Fitur ini akan memantau pengeluaran dan memberi peringatan saat pengeluaran mendekati batas anggaran yang telah ditetapkan.
-                    </p>
-                    <div style={{ display:'flex', gap:'12px' }}>
-                      <button
-                        onClick={() => setShowAlert(false)}
-                        style={{ padding:'12px 28px', backgroundColor:'white', border:`1.5px solid ${MAROON}`, color:MAROON, borderRadius:'10px', fontSize:'14px', fontWeight:'600', cursor:'pointer', fontFamily:'Poppins,sans-serif' }}>
-                        ✕ Tidak
-                      </button>
-                      <button
-                        onClick={() => setNotifAktif(true)}
-                        style={{ flex:1, padding:'12px 28px', backgroundColor:MAROON, color:'white', border:'none', borderRadius:'10px', fontSize:'14px', fontWeight:'600', cursor:'pointer', fontFamily:'Poppins,sans-serif', boxShadow:'0 4px 12px rgba(107,15,26,0.3)' }}>
-                        ✓ Aktifkan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ border:`1.5px solid ${GREEN}`, backgroundColor:'#F0FDF4', borderRadius:'12px', padding:'24px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
-                  <div style={{ width:'52px', height:'52px', backgroundColor:GREEN, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'24px' }}>
-                    ✅
-                  </div>
-                  <div>
-                    <p style={{ fontWeight:'700', fontSize:'16px', color:GREEN, marginBottom:'6px' }}>
-                      Notifikasi Overspending Aktif
-                    </p>
-                    <p style={{ fontSize:'14px', color:'#6B7280', marginBottom:'12px' }}>
-                      Sistem akan memantau pengeluaran kamu dan mengirim peringatan otomatis saat mencapai 95% dari total anggaran.
-                    </p>
-                    <span style={{ display:'inline-block', backgroundColor:GREEN, color:'white', fontSize:'12px', fontWeight:'600', padding:'4px 14px', borderRadius:'20px' }}>
-                      ✓ Aktif sejak April 2025
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setNotifAktif(false)}
-                  style={{ marginTop:'16px', padding:'10px 20px', backgroundColor:'white', border:'1.5px solid #D1D5DB', color:'#6B7280', borderRadius:'8px', fontSize:'13px', cursor:'pointer', fontFamily:'Poppins,sans-serif' }}>
-                  Nonaktifkan Notifikasi
-                </button>
-              </div>
-            )}
           </div>
 
         </div>

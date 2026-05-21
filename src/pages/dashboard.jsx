@@ -13,6 +13,7 @@ export default function Dashboard() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [notifAktif, setNotifAktif] = useState(false)
   const [showNotifBell, setShowNotifBell] = useState(true)
+  const [showNotif, setShowNotif] = useState(false)
 
   const handleAktifkan = () => {
     setNotifAktif(true)
@@ -35,6 +36,10 @@ export default function Dashboard() {
         .shortcut-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(107,15,26,0.12); }
         .dropdown-item { padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:10px; font-size:14px; color:#1A1A1A; transition:background 0.2s; border-radius:8px; }
         .dropdown-item:hover { background:#F5F0E8; }
+        @keyframes fadeIn {
+  from { opacity:0; transform:translateY(-10px); }
+  to { opacity:1; transform:translateY(0); }
+}
       `}</style>
 
       <div style={{ minHeight:'100vh', backgroundColor:CREAM }}>
@@ -62,15 +67,179 @@ export default function Dashboard() {
           {/* Right — Bell + Avatar */}
           <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
             
-            {/* Bell */}
-            <div style={{ position:'relative', cursor:'pointer' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-              </svg>
-              {showNotifBell && (
-                <span style={{ position:'absolute', top:'-4px', right:'-4px', backgroundColor:RED, borderRadius:'50%', width:'16px', height:'16px', fontSize:'10px', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'700' }}>1</span>
-              )}
-            </div>
+            
+            {/* Bell Notification */}
+<div style={{ position:'relative' }}>
+  <div
+    onClick={() => { setShowNotif(!showNotif); setShowDropdown(false) }}
+    style={{
+      position:'relative', cursor:'pointer',
+      padding:'8px', borderRadius:'50%',
+      backgroundColor: showNotif ? 'rgba(255,255,255,0.15)' : 'transparent',
+      transition:'all 0.2s'
+    }}
+  >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+    </svg>
+    {showNotifBell && (
+      <span style={{
+        position:'absolute', top:'-2px', right:'-2px',
+        backgroundColor:RED, borderRadius:'50%',
+        width:'16px', height:'16px', fontSize:'10px',
+        color:'white', display:'flex', alignItems:'center',
+        justifyContent:'center', fontWeight:'700'
+      }}>1</span>
+    )}
+  </div>
+
+  {/* Dropdown Notifikasi */}
+  {showNotif && (
+    <div style={{
+      position:'absolute', right:'-120px', top:'48px',
+      backgroundColor:'white', borderRadius:'16px',
+      boxShadow:'0 8px 32px rgba(0,0,0,0.15)',
+      width:'360px', zIndex:300,
+      animation:'fadeIn 0.2s ease'
+    }}>
+
+      {/* Header */}
+      <div style={{
+        padding:'16px 20px',
+        borderBottom:'1px solid #F3F4F6',
+        display:'flex', justifyContent:'space-between',
+        alignItems:'center'
+      }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <h3 style={{ fontSize:'15px', fontWeight:'700', color:'#1A1A1A' }}>
+            Notifikasi
+          </h3>
+          {showNotifBell && (
+            <span style={{
+              backgroundColor:RED, color:'white',
+              fontSize:'11px', fontWeight:'700',
+              padding:'2px 8px', borderRadius:'20px'
+            }}>1 baru</span>
+          )}
+        </div>
+        <span
+          onClick={() => { setShowNotifBell(false) }}
+          style={{ fontSize:'12px', color:GOLD, fontWeight:'600', cursor:'pointer' }}>
+          Tandai dibaca
+        </span>
+      </div>
+
+      {/* Notif 1 - Spending Alert */}
+      <div style={{
+        padding:'16px 20px',
+        borderBottom:'1px solid #F3F4F6',
+        display:'flex', gap:'12px',
+        alignItems:'flex-start',
+        backgroundColor: showNotifBell ? '#FFF8F0' : 'white',
+        cursor:'pointer',
+        transition:'background 0.2s'
+      }}
+        onClick={() => { setShowNotif(false); navigate('/final-analyze') }}
+      >
+        <div style={{
+          width:'42px', height:'42px',
+          backgroundColor:'#FEF3C7',
+          borderRadius:'50%',
+          display:'flex', alignItems:'center',
+          justifyContent:'center', flexShrink:0, fontSize:'18px'
+        }}>⚠️</div>
+        <div style={{ flex:1 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
+            <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A' }}>
+              Spending Alert!
+            </p>
+            {showNotifBell && (
+              <div style={{ width:'8px', height:'8px', backgroundColor:RED, borderRadius:'50%', marginTop:'4px' }}/>
+            )}
+          </div>
+          <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>
+            Pengeluaranmu telah mencapai 95% dari total anggaran bulan ini.
+          </p>
+          <span style={{ fontSize:'11px', color:GOLD, fontWeight:'500' }}>2 menit lalu</span>
+        </div>
+      </div>
+
+      {/* Notif 2 - Budget */}
+      <div style={{
+        padding:'16px 20px',
+        borderBottom:'1px solid #F3F4F6',
+        display:'flex', gap:'12px',
+        alignItems:'flex-start',
+        cursor:'pointer',
+        transition:'background 0.2s'
+      }}
+        onClick={() => { setShowNotif(false); navigate('/budget-planner') }}
+      >
+        <div style={{
+          width:'42px', height:'42px',
+          backgroundColor:'#F0FDF4',
+          borderRadius:'50%',
+          display:'flex', alignItems:'center',
+          justifyContent:'center', flexShrink:0, fontSize:'18px'
+        }}>💰</div>
+        <div style={{ flex:1 }}>
+          <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A', marginBottom:'4px' }}>
+            Budget Planner Tersimpan
+          </p>
+          <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>
+            Budget planner bulan April berhasil disimpan dan dianalisis.
+          </p>
+          <span style={{ fontSize:'11px', color:'#9CA3AF', fontWeight:'500' }}>1 jam lalu</span>
+        </div>
+      </div>
+
+      {/* Notif 3 - Risk Profile */}
+      <div style={{
+        padding:'16px 20px',
+        borderBottom:'1px solid #F3F4F6',
+        display:'flex', gap:'12px',
+        alignItems:'flex-start',
+        cursor:'pointer',
+        transition:'background 0.2s'
+      }}
+        onClick={() => { setShowNotif(false); navigate('/risk-profile') }}
+      >
+        <div style={{
+          width:'42px', height:'42px',
+          backgroundColor:'#EBF4FF',
+          borderRadius:'50%',
+          display:'flex', alignItems:'center',
+          justifyContent:'center', flexShrink:0, fontSize:'18px'
+        }}>📊</div>
+        <div style={{ flex:1 }}>
+          <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A', marginBottom:'4px' }}>
+            Profil Risiko Diperbarui
+          </p>
+          <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>
+            Profil risiko kamu telah dianalisis. Kategori: Moderat.
+          </p>
+          <span style={{ fontSize:'11px', color:'#9CA3AF', fontWeight:'500' }}>3 jam lalu</span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        onClick={() => setShowNotif(false)}
+        style={{
+          padding:'14px 20px',
+          textAlign:'center',
+          cursor:'pointer',
+          borderRadius:'0 0 16px 16px',
+        }}
+      >
+        <span style={{ fontSize:'13px', color:MAROON, fontWeight:'600' }}>
+          Tutup ✕
+        </span>
+      </div>
+
+    </div>
+  )}
+</div>
 
             {/* Divider */}
             <div style={{ width:'1px', height:'24px', backgroundColor:'rgba(255,255,255,0.3)' }}/>
@@ -298,27 +467,66 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Summary Stats */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'16px' }}>
-            {[
-              { label:'Total Pemasukan', value:'Rp 3.000.000', color:GREEN, badge:null, icon:'↑' },
-              { label:'Total Pengeluaran', value:'Rp 2.800.000', color:RED, badge:'95% terpakai', icon:null },
-              { label:'Tabungan Bulan Ini', value:'Rp 200.000', color:GOLD, badge:'Di bawah target', icon:null },
-              { label:'Profil Risiko', value:'Moderat', color:MAROON, badge:null, sub:'Tetap stabil bulan ini' },
-            ].map((item, i) => (
-              <div key={i} style={{ backgroundColor:'white', borderRadius:'14px', padding:'20px', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', borderLeft:`4px solid ${item.color}` }}>
-                <p style={{ fontSize:'12px', color:'#9CA3AF', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>{item.label}</p>
-                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                  <p style={{ fontSize:'22px', fontWeight:'700', color:item.color }}>{item.value}</p>
-                  {item.icon && <span style={{ color:item.color, fontSize:'18px', fontWeight:'700' }}>{item.icon}</span>}
-                </div>
-                {item.badge && (
-                  <span style={{ display:'inline-block', backgroundColor:GOLD, color:'white', fontSize:'11px', fontWeight:'600', padding:'3px 10px', borderRadius:'20px', marginTop:'6px' }}>{item.badge}</span>
-                )}
-                {item.sub && <p style={{ fontSize:'12px', color:'#9CA3AF', marginTop:'4px' }}>{item.sub}</p>}
-              </div>
-            ))}
-          </div>
+         {/* Summary Stats */}
+<div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'16px' }}>
+  {[
+    { label:'Total Pemasukan', value:'Rp 3.000.000', color:GREEN, badge:null, icon:'↑', sub:null },
+    { label:'Total Pengeluaran', value:'Rp 2.800.000', color:RED, badge:'95% terpakai', icon:null, sub:null },
+    { label:'Tabungan Bulan Ini', value:'Rp 200.000', color:GOLD, badge:'Di bawah target', icon:null, sub:null },
+    { label:'Profil Risiko', value:'Moderat', color:MAROON, badge:null, icon:null, sub:'Tetap stabil bulan ini' },
+  ].map((item, i) => (
+    <div key={i} style={{
+      backgroundColor:'white',
+      borderRadius:'14px',
+      padding:'20px',
+      boxShadow:'0 2px 12px rgba(0,0,0,0.06)',
+      borderLeft:`4px solid ${item.color}`,
+      display:'flex',
+      flexDirection:'column',
+      alignItems:'center',
+      justifyContent:'center',
+      textAlign:'center',
+      minHeight:'120px'
+    }}>
+      <p style={{
+        fontSize:'11px', color:'#9CA3AF',
+        textTransform:'uppercase', letterSpacing:'0.5px',
+        marginBottom:'10px', fontWeight:'600'
+      }}>
+        {item.label}
+      </p>
+
+      <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'6px' }}>
+        <p style={{ fontSize:'22px', fontWeight:'700', color:item.color }}>
+          {item.value}
+        </p>
+        {item.icon && (
+          <span style={{ color:item.color, fontSize:'16px', fontWeight:'700' }}>
+            {item.icon}
+          </span>
+        )}
+      </div>
+
+      {item.badge && (
+        <span style={{
+          display:'inline-block',
+          backgroundColor:GOLD, color:'white',
+          fontSize:'11px', fontWeight:'600',
+          padding:'3px 12px', borderRadius:'20px',
+          marginTop:'4px'
+        }}>
+          {item.badge}
+        </span>
+      )}
+
+      {item.sub && (
+        <p style={{ fontSize:'12px', color:'#9CA3AF', marginTop:'4px' }}>
+          {item.sub}
+        </p>
+      )}
+    </div>
+  ))}
+</div>
 
         </div>
       </div>

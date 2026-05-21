@@ -29,10 +29,10 @@ const defaultKategori = {
 export default function BudgetPlanner() {
   const navigate = useNavigate()
   const [pemasukan, setPemasukan] = useState(() => {
-  // Ambil otomatis dari Risk Profile
-  const savedPenghasilan = localStorage.getItem('penghasilan')
-  return savedPenghasilan || '0'
-})
+    // Ambil otomatis dari Risk Profile
+    const savedPenghasilan = localStorage.getItem('penghasilan')
+    return savedPenghasilan || '0'
+  })
   const [activeTab, setActiveTab] = useState('pokok')
   const [kategori, setKategori] = useState(defaultKategori)
   const [saved, setSaved] = useState(false)
@@ -52,17 +52,102 @@ export default function BudgetPlanner() {
   const handleJumlah = (tab, id, val) => {
     setKategori(prev => ({
       ...prev,
-      [tab]: prev[tab].map(k => k.id === id ? { ...k, jumlah: parseInt(val) || 0 } : k)
+      [tab]: prev[tab].map(k =>
+        k.id === id
+          ? { ...k, jumlah: parseInt(val) || 0 }
+          : k
+      )
     }))
   }
 
   const handleTambah = (tab) => {
     const nama = prompt('Nama kategori baru:')
     if (!nama) return
+
     setKategori(prev => ({
       ...prev,
-      [tab]: [...prev[tab], { id: Date.now(), nama, icon:'📌', jumlah:0 }]
+      [tab]: [
+        ...prev[tab],
+        {
+          id: Date.now(),
+          nama,
+          icon:'📌',
+          jumlah:0
+        }
+      ]
     }))
+  }
+
+  const handleHapus = (tab, id) => {
+    setKategori(prev => ({
+      ...prev,
+      [tab]: prev[tab].filter(k => k.id !== id)
+    }))
+  }
+
+  // Fungsi handleSimpan Baru sesuai instruksi gambar & text request
+  const handleSimpan = async () => {
+    const pemasukanInt     = parseInt(pemasukan || 0)
+    const totalPengeluaran = totalPokok + totalKeinginan
+    const totalSemuanya    = totalPengeluaran + totalTabungan
+    const persenTerpakai   = pemasukanInt > 0
+      ? Math.round((totalPengeluaran / pemasukanInt) * 100)
+      : 0
+
+    // ===== ANALISIS OTOMATIS =====
+    let kategoriRisiko = ''
+    let pesanAnalisis  = ''
+
+    if (persenTerpakai > 90) {
+      kategoriRisiko = 'agresif'
+      pesanAnalisis  = `Kamu telah melewati batas anggaran sebesar ${persenTerpakai - 100 > 0 ? persenTerpakai - 100 : persenTerpakai}% dari total budget bulan ini. Pertimbangkan untuk menekan pengeluaran non-prioritas agar keuangan tetap terkendali.`
+    } else if (persenTerpakai >= 70) {
+      kategoriRisiko = 'moderat'
+      pesanAnalisis  = `Kamu cukup seimbang antara pengeluaran dan tabungan, tapi ada peningkatan pengeluaran di kategori hiburan sebesar ${persenTerpakai}%. Disarankan untuk meninjau ulang batas anggaran kategori tersebut.`
+    } else {
+      kategoriRisiko = 'konservatif'
+      pesanAnalisis  = `Kondisi keuangan kamu stabil. Sebagian besar pengeluaran masih dalam batas aman, dengan alokasi tabungan mencapai ${Math.round((totalTabungan/pemasukanInt)*100)}% dari pendapatan.`
+    }
+
+    // Simpan hasil analisis ke localStorage
+    localStorage.setItem('analisis_kategori',      kategoriRisiko)
+    localStorage.setItem('analisis_pesan',          pesanAnalisis)
+    localStorage.setItem('analisis_pemasukan',      pemasukanInt)
+    localStorage.setItem('analisis_pengeluaran',    totalPengeluaran)
+    localStorage.setItem('analisis_tabungan',       totalTabungan)
+    localStorage.setItem('analisis_persen',          persenTerpakai)
+
+    try {
+      const token = localStorage.getItem('token')
+
+      const response = await fetch('http://127.0.0.1:8000/api/budget-planner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pemasukan:             pemasukanInt,
+          pengeluaran_pokok:      totalPokok,
+          pengeluaran_keinginan: totalKeinginan,
+          tabungan_investasi:    totalTabungan,
+          bulan:                 'April',
+          tahun:                 2025,
+        })
+      })
+
+      if (response.ok) {
+        setSaved(true)
+        setTimeout(() => navigate('/final-analyze'), 1000)
+      }
+
+    } catch (err) {
+      console.log('Error:', err)
+      // Tetap navigate meski API error agar user experience tidak macet
+      setSaved(true)
+      setTimeout(() => navigate('/final-analyze'), 1000)
+    }
   }
 
   const tabs = [
@@ -148,7 +233,6 @@ export default function BudgetPlanner() {
                  readOnly
                  style={{ width:'100%', height:'52px', padding:'0 16px 0 48px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'16px', fontWeight:'600', color:'#1A1A1A', backgroundColor:'#F3F4F6', boxSizing:'border-box', cursor:'not-allowed' }}
                  />
-              
             </div>
 
             <div style={{ backgroundColor:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'10px' }}>
@@ -191,14 +275,24 @@ export default function BudgetPlanner() {
                   <p style={{ fontWeight:'600', fontSize:'14px', color:'#1A1A1A', marginBottom:'2px' }}>{item.nama}</p>
                   <p style={{ fontSize:'12px', color:'#9CA3AF' }}>Batas anggaran</p>
                 </div>
-                <div style={{ position:'relative' }}>
-                  <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', fontSize:'13px', fontWeight:'500' }}>Rp</span>
-                  <input
-                    type="number"
-                    value={item.jumlah}
-                    onChange={e => handleJumlah(activeTab, item.id, e.target.value)}
-                    style={{ width:'180px', height:'44px', padding:'0 12px 0 36px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', fontWeight:'600', color:'#1A1A1A', backgroundColor:'#FAFAFA', boxSizing:'border-box', textAlign:'right' }}
-                  />
+                <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                  <div style={{ position:'relative' }}>
+                    <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', fontSize:'13px', fontWeight:'500' }}>Rp</span>
+                    <input
+                      type="number"
+                      value={item.jumlah}
+                      onChange={e => handleJumlah(activeTab, item.id, e.target.value)}
+                      style={{ width:'180px', height:'44px', padding:'0 12px 0 36px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', fontWeight:'600', color:'#1A1A1A', backgroundColor:'#FAFAFA', boxSizing:'border-box', textAlign:'right' }}
+                    />
+                  </div>
+
+                  {/* Tombol Hapus */}
+                  <button
+                    onClick={() => handleHapus(activeTab, item.id)}
+                    style={{ width:'40px', height:'40px', border:'none', borderRadius:'10px', backgroundColor:'#FEE2E2', color:'#DC2626', cursor:'pointer', fontSize:'18px', fontWeight:'700' }}
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             ))}
@@ -275,7 +369,7 @@ export default function BudgetPlanner() {
             </div>
           </div>
 
-          {/* Simpan Button */}
+          {/* Simpan Button Terintegrasi dengan handleSimpan */}
           {saved ? (
             <div style={{ backgroundColor:'#F0FDF4', border:`1.5px solid ${GREEN}`, borderRadius:'16px', padding:'20px', textAlign:'center' }}>
               <span style={{ fontSize:'24px' }}>✅</span>
@@ -287,7 +381,7 @@ export default function BudgetPlanner() {
             </div>
           ) : (
             <button
-              onClick={() => setSaved(true)}
+              onClick={handleSimpan} // <-- Diubah dari setSaved(true) menjadi memanggil fungsi handleSimpan
               style={{ width:'100%', height:'56px', backgroundColor:MAROON, color:'white', border:'none', borderRadius:'14px', fontSize:'16px', fontWeight:'700', cursor:'pointer', boxShadow:'0 4px 20px rgba(107,15,26,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', fontFamily:'Poppins,sans-serif' }}>
               ✓ Simpan Budget Planner
             </button>

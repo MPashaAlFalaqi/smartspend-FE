@@ -250,7 +250,7 @@ function Login() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     style={{ position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'18px', color:'#9CA3AF' }}>
-                    {showPassword ? '🙈' : '👁️'}
+                    
                   </button>
                 </div>
               </div>
