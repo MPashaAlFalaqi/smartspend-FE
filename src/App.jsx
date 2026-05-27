@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, Link, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
+import Swal from 'sweetalert2' // <-- Ditambahkan: Mengimport SweetAlert2 untuk pop-up keren
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import RiskProfile from './pages/RiskProfile'
@@ -20,7 +22,7 @@ const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
 const CREAM = '#F5F0E8'
 
-const font =`
+const font = `
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
   body { background: ${MAROON}; }
@@ -33,47 +35,116 @@ function Login() {
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
 
+  // ===== LOGIKA LOGIN GOOGLE DENGAN SWEETALERT2 =====
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        setError('')
+        
+        // 1. Kirim access_token dari pop-up Google ke Backend Laravel
+        const response = await fetch('http://127.0.0.1:8000/api/auth/google', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ 
+            token: tokenResponse.access_token 
+          })
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          // 2. Simpan token & data user ke localStorage
+          localStorage.setItem('token', data.token)
+          localStorage.setItem('namaUser', data.user.nama)
+          localStorage.setItem('role', data.user.role || 'user')
+
+          // 3. FIXED: Pop-up Sukses Menggunakan SweetAlert2 (Sama seperti Register)
+          Swal.fire({
+            title: 'Masuk Berhasil!',
+            text: `Selamat datang kembali, ${data.user.nama}!`,
+            icon: 'success',
+            confirmButtonColor: MAROON, // Menggunakan warna tema Maroon milikmu
+            confirmButtonText: 'Lanjutkan ke Dashboard',
+            customClass: {
+              popup: 'animated fadeInDown'
+            }
+          }).then((result) => {
+            // Setelah user klik tombol OK pada pop-up, barulah pindah halaman
+            if (result.isConfirmed || result.isDismissed) {
+              navigate('/dashboard') 
+            }
+          })
+
+        } else {
+          setError(data.message || 'Gagal sinkronisasi akun dengan sistem SmartSpend.')
+        }
+      } catch (error) {
+        setError('Koneksi ke backend Laravel terputus. Pastikan server laravel menyala!')
+      }
+    },
+    onError: () => setError('Gagal melakukan autentikasi lewat popup Google.'),
+  })
+
+  // ===== LOGIKA LOGIN MANUAL (EMAIL & PASSWORD) =====
   const handleLogin = async (e) => {
-  e.preventDefault()
-  if (!email || !pass) {
-    setError('Email dan password wajib diisi!')
-    return
-  }
-
-  // Cek admin lokal
-  if (email === 'admin@smartspend.com' && pass === 'admin123') {
-    localStorage.setItem('role', 'admin')
-    localStorage.setItem('namaUser', 'Admin')
-    navigate('/admin-dashboard')
-    return
-  }
-
-  try {
-    const response = await fetch('http://127.0.0.1:8000/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ email, password: pass })
-    })
-
-    const data = await response.json()
-
-    if (response.ok) {
-      // Simpan token & data user
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('namaUser', data.user.nama)
-      localStorage.setItem('role', data.user.role)
-      navigate('/dashboard')
-    } else {
-      setError(data.message || 'Email atau password salah!')
+    e.preventDefault()
+    if (!email || !pass) {
+      setError('Email dan password wajib diisi!')
+      return
     }
 
-  } catch (error) {
-    setError('Gagal terhubung ke server. Pastikan backend jalan!')
+    if (email === 'admin@smartspend.com' && pass === 'admin123') {
+      localStorage.setItem('role', 'admin')
+      localStorage.setItem('namaUser', 'Admin')
+      
+      Swal.fire({
+        title: 'Mode Admin Aktif',
+        text: 'Selamat datang di panel Admin SmartSpend!',
+        icon: 'info',
+        confirmButtonColor: MAROON,
+      }).then(() => {
+        navigate('/admin-dashboard')
+      })
+      return
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email, password: pass })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('namaUser', data.user.nama)
+        localStorage.setItem('role', data.user.role)
+        
+        Swal.fire({
+          title: 'Masuk Berhasil!',
+          text: `Selamat datang kembali, ${data.user.nama}!`,
+          icon: 'success',
+          confirmButtonColor: MAROON,
+        }).then(() => {
+          navigate('/dashboard')
+        })
+      } else {
+        setError(data.message || 'Email atau password salah!')
+      }
+
+    } catch (error) {
+      setError('Gagal terhubung ke server. Pastikan backend jalan!')
+    }
   }
-}
+
   return (
     <>
       <style>{`
@@ -84,12 +155,9 @@ function Login() {
         .login-btn { transition: all 0.2s ease; }
       `}</style>
 
-      <div style={{
-        minHeight:'100vh', width:'100vw',
-        display:'flex', margin:0, padding:0,
-      }}>
+      <div style={{ minHeight:'100vh', width:'100vw', display:'flex', margin:0, padding:0 }}>
 
-        {/* KIRI — Branding */}
+        {/* KIRI — Branding Panel */}
         <div style={{
           width:'45%',
           backgroundColor:MAROON,
@@ -101,7 +169,6 @@ function Login() {
           backgroundImage:`radial-gradient(circle at 30% 70%, rgba(201,168,76,0.2) 0%, transparent 60%)`,
           position:'relative',
         }}>
-          {/* Logo */}
           <div style={{ position:'absolute', top:'32px', left:'32px', display:'flex', alignItems:'center', gap:'8px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
@@ -109,7 +176,6 @@ function Login() {
             <span style={{ color:GOLD, fontWeight:'700', fontSize:'20px' }}>SmartSpend</span>
           </div>
 
-          {/* Konten Tengah */}
           <div style={{ textAlign:'center' }}>
             <div style={{
               width:'120px', height:'120px',
@@ -131,12 +197,11 @@ function Login() {
               Masuk ke akun SmartSpend kamu dan kelola keuangan dengan lebih cerdas.
             </p>
 
-            {/* Feature list */}
             {[
               '📊 Analisis profil risiko finansial',
               '💰 Budget planner bulanan',
               '🔔 Spending alert otomatis',
-            ].map((item,i) => (
+            ].map((item, i) => (
               <div key={i} style={{
                 display:'flex', alignItems:'center', gap:'12px',
                 marginBottom:'10px', width:'100%',
@@ -151,26 +216,16 @@ function Login() {
             ))}
           </div>
 
-          {/* Bottom text */}
           <div style={{ position:'absolute', bottom:'32px', textAlign:'center' }}>
-            <span style={{ color:'rgba(255,255,255,0.5)', fontSize:'13px' }}>
-              Belum punya akun?{' '}
-            </span>
-            <span
-              onClick={() => navigate('/register')}
-              style={{ color:GOLD, fontWeight:'600', fontSize:'13px', cursor:'pointer' }}>
+            <span style={{ color:'rgba(255,255,255,0.5)', fontSize:'13px' }}>Belum punya akun? </span>
+            <span onClick={() => navigate('/register')} style={{ color:GOLD, fontWeight:'600', fontSize:'13px', cursor:'pointer' }}>
               Daftar sekarang
             </span>
           </div>
         </div>
 
-        {/* KANAN — Form Login */}
-        <div style={{
-          width:'55%',
-          backgroundColor:'#F5F0E8',
-          display:'flex', alignItems:'center',
-          justifyContent:'center', padding:'32px',
-        }}>
+        {/* KANAN — Form Area */}
+        <div style={{ width:'55%', backgroundColor:'#F5F0E8', display:'flex', alignItems:'center', justifyContent:'center', padding:'32px' }}>
           <div style={{
             backgroundColor:'#FFFFFF',
             borderRadius:'20px',
@@ -179,7 +234,6 @@ function Login() {
             boxShadow:'0 4px 32px rgba(107,15,26,0.08)',
           }}>
 
-            {/* Header */}
             <div style={{ marginBottom:'32px' }}>
               <h1 style={{ color:MAROON, fontSize:'26px', fontWeight:'700', margin:'0 0 6px', letterSpacing:'-0.3px' }}>
                 Masuk ke Akun SmartSpend
@@ -189,25 +243,17 @@ function Login() {
               </p>
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{
-                backgroundColor:'#FEF2F2',
-                border:'1px solid #FECACA',
-                borderLeft:'4px solid #C0392B',
-                borderRadius:'10px',
-                padding:'12px 16px', marginBottom:'20px',
-                color:'#C0392B', fontSize:'13px',
-                display:'flex', alignItems:'center', gap:'8px',
+                backgroundColor:'#FEF2F2', border:'1px solid #FECACA', borderLeft:'4px solid #C0392B',
+                borderRadius:'10px', padding:'12px 16px', marginBottom:'20px', color:'#C0392B',
+                fontSize:'13px', display:'flex', alignItems:'center', gap:'8px',
               }}>
                 ⚠️ {error}
               </div>
             )}
 
-            {/* Form */}
             <form onSubmit={handleLogin}>
-
-              {/* Email */}
               <div style={{ marginBottom:'18px' }}>
                 <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'8px', color:'#374151', letterSpacing:'0.3px' }}>
                   ALAMAT EMAIL
@@ -219,15 +265,12 @@ function Login() {
                   value={email}
                   onChange={e => { setEmail(e.target.value); setError('') }}
                   style={{
-                    width:'100%', height:'50px', padding:'0 16px',
-                    border:'1.5px solid #E5E7EB', borderRadius:'10px',
-                    fontSize:'14px', boxSizing:'border-box',
-                    backgroundColor:'#FAFAFA', color:'#1A1A1A',
+                    width:'100%', height:'50px', padding:'0 16px', border:'1.5px solid #E5E7EB',
+                    borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A',
                   }}
                 />
               </div>
 
-              {/* Password */}
               <div style={{ marginBottom:'12px' }}>
                 <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'8px', color:'#374151', letterSpacing:'0.3px' }}>
                   PASSWORD
@@ -240,66 +283,61 @@ function Login() {
                     value={pass}
                     onChange={e => { setPass(e.target.value); setError('') }}
                     style={{
-                      width:'100%', height:'50px', padding:'0 48px 0 16px',
-                      border:'1.5px solid #E5E7EB', borderRadius:'10px',
-                      fontSize:'14px', boxSizing:'border-box',
-                      backgroundColor:'#FAFAFA', color:'#1A1A1A',
+                      width:'100%', height:'50px', padding:'0 48px 0 16px', border:'1.5px solid #E5E7EB',
+                      borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A',
                     }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'18px', color:'#9CA3AF' }}>
-                    
+                    style={{
+                      position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)',
+                      background:'none', border:'none', cursor:'pointer', fontSize:'13px', color:'#9CA3AF', fontWeight:'500'
+                    }}
+                  >
+                    {showPassword ? 'Sembunyikan' : 'Lihat'}
                   </button>
                 </div>
               </div>
 
-              {/* Ingat saya + Lupa password */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'28px' }}>
                 <label style={{ display:'flex', alignItems:'center', gap:'8px', cursor:'pointer' }}>
                   <input type="checkbox" style={{ accentColor:MAROON, width:'15px', height:'15px' }}/>
                   <span style={{ fontSize:'13px', color:'#6B7280' }}>Ingat saya</span>
                 </label>
-                <span
-                  onClick={() => navigate('/forgot-password')}
-                  style={{ fontSize:'13px', color:MAROON, fontWeight:'600', cursor:'pointer' }}>
+                <span onClick={() => navigate('/forgot-password')} style={{ fontSize:'13px', color:MAROON, fontWeight:'600', cursor:'pointer' }}>
                   Lupa Password?
                 </span>
               </div>
 
-              {/* Tombol Login */}
               <button
                 type="submit"
                 className="login-btn"
                 style={{
-                  width:'100%', height:'52px',
-                  backgroundColor:MAROON, color:'#FFFFFF',
-                  border:'none', borderRadius:'12px',
-                  fontSize:'15px', fontWeight:'700',
-                  cursor:'pointer', marginBottom:'20px',
-                  boxShadow:'0 4px 16px rgba(107,15,26,0.35)',
-                  letterSpacing:'0.3px',
-                }}>
+                  width:'100%', height:'52px', backgroundColor:MAROON, color:'#FFFFFF',
+                  border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'700',
+                  cursor:'pointer', marginBottom:'20px', boxShadow:'0 4px 16px rgba(107,15,26,0.35)', letterSpacing:'0.3px',
+                }}
+              >
                 Masuk →
               </button>
 
-              {/* Divider */}
               <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px' }}>
                 <div style={{ flex:1, height:'1px', backgroundColor:'#E5E7EB' }}/>
                 <span style={{ fontSize:'12px', color:'#9CA3AF', fontWeight:'500' }}>atau masuk dengan</span>
                 <div style={{ flex:1, height:'1px', backgroundColor:'#E5E7EB' }}/>
               </div>
 
-              {/* Google */}
-              <button type="button" style={{
-                width:'100%', height:'48px',
-                backgroundColor:'#FFFFFF', border:'1.5px solid #E5E7EB',
-                borderRadius:'12px', fontSize:'14px', fontWeight:'500',
-                cursor:'pointer', display:'flex', alignItems:'center',
-                justifyContent:'center', gap:'10px',
-                fontFamily:'Poppins,sans-serif',
-              }}>
+              {/* Tombol Google Auth */}
+              <button 
+                type="button" 
+                onClick={() => handleGoogleLogin()} 
+                style={{
+                  width:'100%', height:'48px', backgroundColor:'#FFFFFF', border:'1.5px solid #E5E7EB',
+                  borderRadius:'12px', fontSize:'14px', fontWeight:'500', cursor:'pointer',
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
+                }}
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -311,12 +349,9 @@ function Login() {
 
             </form>
 
-            {/* Daftar */}
             <p style={{ textAlign:'center', fontSize:'14px', color:'#9CA3AF', marginTop:'24px', marginBottom:0 }}>
               Belum punya akun?{' '}
-              <span
-                onClick={() => navigate('/register')}
-                style={{ color:MAROON, fontWeight:'700', cursor:'pointer' }}>
+              <span onClick={() => navigate('/register')} style={{ color:MAROON, fontWeight:'700', cursor:'pointer' }}>
                 Daftar Sekarang
               </span>
             </p>
@@ -327,68 +362,40 @@ function Login() {
     </>
   )
 }
+
 function AnimatedRoutes() {
   const location = useLocation()
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={
-          <PageTransition><Login /></PageTransition>
-        }/>
-        <Route path="/login" element={
-          <PageTransition><Login /></PageTransition>
-        }/>
-        <Route path="/register" element={
-          <PageTransition><Register /></PageTransition>
-        }/>
-        <Route path="/forgot-password" element={
-          <PageTransition><ForgotPassword /></PageTransition>
-        }/>
-        <Route path="/reset-password" element={
-          <PageTransition><ResetPassword /></PageTransition>
-        }/>
-        <Route path="/reset-success" element={
-          <PageTransition><ResetSuccess /></PageTransition>
-        }/>
-        <Route path="/dashboard" element={
-          <PageTransition><Dashboard /></PageTransition>
-        }/>
-        <Route path="/risk-profile" element={
-          <PageTransition><RiskProfile /></PageTransition>
-        }/>
-        <Route path="/budget-planner" element={
-          <PageTransition><BudgetPlanner /></PageTransition>
-        }/>
-        <Route path="/final-analyze" element={
-          <PageTransition><FinalAnalyze /></PageTransition>
-        }/>
-        <Route path="/history" element={
-          <PageTransition><History /></PageTransition>
-        }/>
-        <Route path="/user-profile" element={
-  <PageTransition><UserProfile /></PageTransition>
-}/>
-<Route path="/admin-dashboard" element={
-  <PageTransition><AdminDashboard /></PageTransition>
-}/>
-<Route path="/admin-manage-users" element={
-  <PageTransition><AdminManageUsers /></PageTransition>
-}/>
-<Route path="/admin-reports" element={
-  <PageTransition><AdminReports /></PageTransition>
-}/>
+        <Route path="/" element={<PageTransition><Login /></PageTransition>}/>
+        <Route path="/login" element={<PageTransition><Login /></PageTransition>}/>
+        <Route path="/register" element={<PageTransition><Register /></PageTransition>}/>
+        <Route path="/forgot-password" element={<PageTransition><ForgotPassword /></PageTransition>}/>
+        <Route path="/reset-password" element={<PageTransition><ResetPassword /></PageTransition>}/>
+        <Route path="/reset-success" element={<PageTransition><ResetSuccess /></PageTransition>}/>
+        <Route path="/dashboard" element={<PageTransition><Dashboard /></PageTransition>}/>
+        <Route path="/risk-profile" element={<PageTransition><RiskProfile /></PageTransition>}/>
+        <Route path="/budget-planner" element={<PageTransition><BudgetPlanner /></PageTransition>}/>
+        <Route path="/final-analyze" element={<PageTransition><FinalAnalyze /></PageTransition>}/>
+        <Route path="/history" element={<PageTransition><History /></PageTransition>}/>
+        <Route path="/user-profile" element={<PageTransition><UserProfile /></PageTransition>}/>
+        <Route path="/admin-dashboard" element={<PageTransition><AdminDashboard /></PageTransition>}/>
+        <Route path="/admin-manage-users" element={<PageTransition><AdminManageUsers /></PageTransition>}/>
+        <Route path="/admin-reports" element={<PageTransition><AdminReports /></PageTransition>}/>
       </Routes>
     </AnimatePresence>
   )
 }
+
 export default function App() {
   return (    
-    <>
+    <GoogleOAuthProvider clientId="666018414846-v86923a912h55a9nqlg1k3c9hkqrvmho.apps.googleusercontent.com">
       <style>{font}</style>
       <BrowserRouter>
         <AnimatedRoutes />
       </BrowserRouter>
-    </>
+    </GoogleOAuthProvider>
   )
-} 
+}

@@ -55,7 +55,7 @@ export default function History() {
 
       <div style={{ minHeight:'100vh', backgroundColor:CREAM }}>
 
-        {/* NAVBAR */}
+        {/* ===== NAVBAR ===== */}
         <nav style={{ backgroundColor:MAROON, height:'56px', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, zIndex:100 }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
@@ -64,8 +64,8 @@ export default function History() {
             <span style={{ color:GOLD, fontWeight:'700', fontSize:'20px' }}>SmartSpend</span>
           </div>
 
+          {/* Nav Links — Tombol Login Sudah Dihapus */}
           <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
-            <Link to="/login" className="nav-link">Login</Link>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/risk-profile" className="nav-link">Risk Profile</Link>
             <Link to="/budget-planner" className="nav-link">Budget Planner</Link>
@@ -94,7 +94,7 @@ export default function History() {
             {/* Dropdown Bulan */}
             <div style={{ position:'relative' }}>
               <div
-                onClick={() => { setShowBulan(!showBulan); setShowKategori(false) }}
+                onClick={() => setShowBulan(!showBulan)}
                 style={{ display:'flex', alignItems:'center', gap:'8px', height:'44px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', cursor:'pointer', backgroundColor:'white', minWidth:'165px' }}
               >
                 <span style={{ fontSize:'16px' }}>📅</span>
@@ -114,7 +114,6 @@ export default function History() {
                 </div>
               )}
             </div>
-
 
             {/* Toggle Tipe */}
             <div style={{ backgroundColor:'#F3F4F6', borderRadius:'10px', padding:'4px', display:'flex', gap:'4px' }}>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import Swal from 'sweetalert2' // <-- Ditambahkan untuk pop-up sukses
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -8,14 +9,54 @@ export default function ForgotPassword() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false) // <-- Ditambahkan untuk status loading tombol
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email) {
       setError('Email wajib diisi!')
       return
     }
-    navigate('/reset-password')
+
+    try {
+      setError('')
+      setLoading(true)
+
+      // 1. Kirim data email ke API Laravel
+      const response = await fetch('http://127.0.0.1:8000/api/password/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // 2. Tampilkan pop-up sukses menggunakan SweetAlert2 jika email ditemukan
+        Swal.fire({
+          title: 'Email Terkirim!',
+          text: 'Link untuk mereset password telah dikirim ke email kamu. Silakan periksa inbox Anda.',
+          icon: 'success',
+          confirmButtonColor: MAROON,
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed || result.isDismissed) {
+            navigate('/login') // Diarahkan kembali ke login setelah sukses
+          }
+        })
+      } else {
+        // 3. Tangani jika email tidak terdaftar di database web kamu
+        setError(data.message || 'Email tidak terdaftar di sistem kami.')
+      }
+
+    } catch (err) {
+      setError('Gagal terhubung ke server. Pastikan backend Laravel kamu menyala!')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -24,6 +65,8 @@ export default function ForgotPassword() {
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
         input:focus { border-color:${MAROON} !important; outline:none; }
+        .fp-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .fp-btn { transition: all 0.2s ease; }
       `}</style>
 
       <div style={{
@@ -50,8 +93,10 @@ export default function ForgotPassword() {
             width:'72px', height:'72px',
             backgroundColor:'#FFF3E0',
             borderRadius:'50%',
-            display:'flex', alignItems:'center', justifyContent:'center',
+            display:'flex', alignItems:'center', justifyCenter:'center',
             margin:'0 auto 20px',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
@@ -115,16 +160,22 @@ export default function ForgotPassword() {
               />
             </div>
 
-            <button type="submit" style={{
-              width:'100%', height:'52px',
-              backgroundColor:MAROON, color:'#fff',
-              border:'none', borderRadius:'12px',
-              fontSize:'15px', fontWeight:'600',
-              cursor:'pointer', marginBottom:'20px',
-              boxShadow:'0 4px 15px rgba(107,15,26,0.3)',
-              fontFamily:'Poppins,sans-serif',
-            }}>
-              Kirim Link Reset
+            <button 
+              type="submit" 
+              className="fp-btn"
+              disabled={loading}
+              style={{
+                width:'100%', height:'52px',
+                backgroundColor:MAROON, color:'#fff',
+                border:'none', borderRadius:'12px',
+                fontSize:'15px', fontWeight:'600',
+                cursor: loading ? 'not-allowed' : 'pointer', marginBottom:'20px',
+                boxShadow:'0 4px 15px rgba(107,15,26,0.3)',
+                fontFamily:'Poppins,sans-serif',
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? 'Mohon Tunggu...' : 'Kirim Link Reset'}
             </button>
           </form>
 
