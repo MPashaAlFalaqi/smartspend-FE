@@ -15,14 +15,12 @@ export default function RiskProfile() {
   const [error, setError] = useState('')
   const [sukses, setSukses] = useState(false)
 
-  // Fungsi pembantu untuk mengubah angka murni menjadi format ribuan ber-titik
   const formatRibuan = (nilai) => {
     if (!nilai) return ''
     const angkaSaja = nilai.toString().replace(/[^0-9]/g, '')
     return angkaSaja.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   }
 
-  // Fungsi pembantu untuk membersihkan titik agar kembali jadi angka murni
   const bersihkanAngka = (nilai) => {
     return nilai.replace(/[^0-9]/g, '')
   }
@@ -50,6 +48,9 @@ export default function RiskProfile() {
     setError('')
   }
 
+  // ==========================================
+  // FIXED: PROSES SUBMIT SINKRON DENGAN BACKEND
+  // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.nama || !form.usia || !form.pekerjaan || !form.status || !form.penghasilan) {
@@ -65,6 +66,12 @@ export default function RiskProfile() {
     try {
       const token = localStorage.getItem('token')
 
+      // Antisipasi penulisan ENUM status untuk MySQL (diubah jadi huruf kecil & Pensiunan -> pensiun)
+      let statusFormatDatabase = form.status.toLowerCase();
+      if (statusFormatDatabase === 'pensiunan') {
+        statusFormatDatabase = 'pensiun';
+      }
+
       const response = await fetch('http://127.0.0.1:8000/api/risk-profile', {
         method: 'POST',
         headers: {
@@ -73,10 +80,10 @@ export default function RiskProfile() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          usia:        form.usia,
+          usia:        parseInt(form.usia),          // Diubah ke Integer murni
           pekerjaan:   form.pekerjaan,
-          status:      form.status,
-          penghasilan: form.penghasilan,
+          status:      statusFormatDatabase,         // Huruf kecil sesuai ENUM database
+          penghasilan: parseFloat(form.penghasilan), // Diubah ke Float/Numeric murni
         })
       })
 
@@ -109,7 +116,6 @@ export default function RiskProfile() {
         .nav-link { color:white; text-decoration:none; font-size:14px; padding:6px 12px; border-radius:20px; transition:all 0.2s; }
         .nav-link:hover { background:rgba(255,255,255,0.15); }
         
-        /* Gaya Input Modern */
         .custom-input {
           width: 100%;
           height: 50px;
@@ -129,7 +135,6 @@ export default function RiskProfile() {
           outline: none;
         }
 
-        /* Tombol Pilihan Status */
         .status-pill {
           padding: 12px 24px;
           border: 1.5px solid #E5E7EB;
@@ -155,7 +160,6 @@ export default function RiskProfile() {
           box-shadow: 0 4px 12px rgba(107, 15, 26, 0.2);
         }
 
-        /* Tombol Submit Premium */
         .btn-submit {
           width: 100%;
           height: 54px;
@@ -212,7 +216,6 @@ export default function RiskProfile() {
         {/* ===== MAIN CONTAINER ===== */}
         <div style={{ maxWidth:'740px', margin:'0 auto', padding:'48px 24px' }}>
 
-          {/* Form Card Box Glamour */}
           <div style={{ 
             backgroundColor:'#FFFFFF', 
             borderRadius:'24px', 
@@ -221,7 +224,6 @@ export default function RiskProfile() {
             border: '1px solid rgba(107, 15, 26, 0.05)'
           }}>
 
-            {/* Header Title Section */}
             <div style={{ textAlign: 'center', marginBottom: '36px' }}>
               <span style={{ 
                 backgroundColor: 'rgba(201,168,76,0.12)', 
@@ -244,14 +246,12 @@ export default function RiskProfile() {
               </p>
             </div>
 
-            {/* Alert Error */}
             {error && (
               <div style={{ backgroundColor:'#FEF2F2', borderLeft:`4px solid ${RED}`, borderRadius:'12px', padding:'14px 20px', marginBottom:'28px', color:RED, fontSize:'14px', display:'flex', alignItems:'center', gap:'10px', boxShadow: '0 2px 6px rgba(192,57,43,0.05)' }}>
                 <span style={{ fontSize: '16px' }}>⚠️</span> {error}
               </div>
             )}
 
-            {/* Pesan Sukses */}
             {sukses && (
               <div style={{ backgroundColor:'#F0FDF4', borderLeft:'4px solid #2D6A4F', borderRadius:'12px', padding:'14px 20px', marginBottom:'28px', color:'#2D6A4F', fontSize:'14px', fontWeight:'500', display:'flex', alignItems:'center', gap:'10px', boxShadow: '0 2px 6px rgba(45,106,79,0.05)' }}>
                 <span style={{ fontSize: '16px' }}>✅</span> Data berhasil disimpan! Mengarahkan ke Budget Planner...
@@ -260,7 +260,6 @@ export default function RiskProfile() {
 
             <form onSubmit={handleSubmit} style={{ textAlign:'left' }}>
 
-              {/* Input Nama */}
               <div style={{ marginBottom:'24px' }}>
                 <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px', color:'#4B5563', letterSpacing:'0.5px' }}>NAMA LENGKAP</label>
                 <input
@@ -271,7 +270,6 @@ export default function RiskProfile() {
                 />
               </div>
 
-              {/* Grid Usia & Pekerjaan */}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px', marginBottom:'24px' }}>
                 <div>
                   <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px', color:'#4B5563', letterSpacing:'0.5px' }}>USIA (TAHUN)</label>
@@ -301,7 +299,6 @@ export default function RiskProfile() {
                 </div>
               </div>
 
-              {/* Pilihan Status Dinamis */}
               <div style={{ marginBottom:'24px' }}>
                 <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'10px', color:'#4B5563', letterSpacing:'0.5px' }}>STATUS SAAT INI</label>
                 <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
@@ -317,7 +314,6 @@ export default function RiskProfile() {
                 </div>
               </div>
 
-              {/* Input Penghasilan Rupiah */}
               <div style={{ marginBottom:'36px' }}>
                 <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px', color:'#4B5563', letterSpacing:'0.5px' }}>PENGHASILAN BULANAN</label>
                 <div style={{ position:'relative' }}>
@@ -327,7 +323,6 @@ export default function RiskProfile() {
                     top:'50%', 
                     transform:'translateY(-50%)', 
                     color: MAROON, 
-                     Bertram: 'sans-serif',
                     fontWeight:'700', 
                     fontSize:'15px',
                     pointerEvents: 'none'
@@ -346,7 +341,6 @@ export default function RiskProfile() {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <button 
                 type="submit" 
                 disabled={sukses}

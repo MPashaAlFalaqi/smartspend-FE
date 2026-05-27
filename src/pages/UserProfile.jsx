@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import axios from 'axios'
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -14,17 +15,19 @@ export default function UserProfile() {
   const [saved, setSaved] = useState(false)
   const [savedMessage, setSavedMessage] = useState('')
 
-  const namaUser = localStorage.getItem('namaUser') || 'Andi Pratama'
+  // SINKRONISASI 1: Ubah key sesuai dengan yang digunakan pada Dashboard.jsx ('user_name')
+  const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
+  const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
 
-  // State Form Utama
+  // State Form Utama (Nilai awal mengambil langsung dari state di atas agar sinkron)
   const [form, setForm] = useState({
     nama: namaUser,
-    username: 'andipratama',
+    username: namaUser.toLowerCase().replace(/\s+/g, ''),
     noHp: '+62 812-3456-7890',
     tanggalLahir: '15 Maret 1998',
     jenisKelamin: 'Laki-laki',
     kota: 'Malang, Jawa Timur',
-    email: 'andi@email.com',
+    email: emailUser,
   })
 
   // State Form Keamanan
@@ -32,9 +35,44 @@ export default function UserProfile() {
     passwordLama: '',
     passwordBaru: '',
     konfirmasiPassword: '',
-    emailBaru: form.email,
-    noHpBaru: form.noHp,
+    emailBaru: emailUser,
+    noHpBaru: '+62 812-3456-7890',
   })
+
+  // SINKRONISASI 2: Ambil data live dari database saat komponen dimuat (sama seperti dashboard)
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (userRes.data) {
+          const fetchedName = userRes.data.name || 'User'
+          const fetchedEmail = userRes.data.email || 'user@email.com'
+          
+          setNamaUser(fetchedName)
+          setEmailUser(fetchedEmail)
+          
+          setForm(prev => ({
+            ...prev,
+            nama: fetchedName,
+            email: fetchedEmail,
+            username: fetchedName.toLowerCase().replace(/\s+/g, '')
+          }))
+          
+          setSecurityForm(prev => ({
+            ...prev,
+            emailBaru: fetchedEmail
+          }))
+        }
+      } catch (error) {
+        console.error('Gagal memuat informasi profil dari server:', error)
+      }
+    }
+
+    fetchUserData()
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -48,7 +86,9 @@ export default function UserProfile() {
 
   const handleSaveProfil = (e) => {
     e.preventDefault()
-    localStorage.setItem('namaUser', form.nama)
+    // SINKRONISASI 3: Update local storage menggunakan key 'user_name' agar navbar ikut ter-update
+    localStorage.setItem('user_name', form.nama)
+    setNamaUser(form.nama)
     triggerNotif('Perubahan informasi pribadi berhasil disimpan!')
   }
 
@@ -63,6 +103,8 @@ export default function UserProfile() {
       email: securityForm.emailBaru,
       noHp: securityForm.noHpBaru
     })
+    setEmailUser(securityForm.emailBaru)
+    localStorage.setItem('user_email', securityForm.emailBaru)
     triggerNotif('Pengaturan keamanan berhasil diperbarui!')
   }
 
@@ -72,7 +114,6 @@ export default function UserProfile() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  // Menu Profil Risiko sudah dihapus dari daftar ini
   const menus = [
     { key: 'profil', icon: '👤', label: 'Informasi Pribadi' },
     { key: 'keamanan', icon: '🔒', label: 'Keamanan' },
@@ -108,7 +149,7 @@ export default function UserProfile() {
 
         {/* NAVBAR */}
         <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
             </svg>
@@ -126,7 +167,7 @@ export default function UserProfile() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
-                {namaUser.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                {namaUser ? namaUser.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US'}
               </span>
             </div>
             <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{namaUser}</span>
@@ -144,7 +185,7 @@ export default function UserProfile() {
                 <div style={{ position: 'relative', display: 'inline-block', marginBottom: '12px' }}>
                   <div style={{ width: '80px', height: '80px', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                     <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
-                      {form.nama.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      {form.nama ? form.nama.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'US'}
                     </span>
                   </div>
                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '24px', height: '24px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>
@@ -313,7 +354,7 @@ export default function UserProfile() {
             <p style={{ color: '#6B7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '28px' }}>Kamu akan keluar dari sesi SmartSpend.</p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', backgroundColor: 'white', border: `1.5px solid ${MAROON}`, color: MAROON, borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Batal</button>
-              <button onClick={() => navigate('/')} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Ya, Keluar 🚪</button>
+              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Ya, Keluar 🚪</button>
             </div>
           </div>
         </div>

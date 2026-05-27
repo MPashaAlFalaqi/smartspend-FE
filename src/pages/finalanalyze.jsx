@@ -1,4 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import Swal from 'sweetalert2' // <-- 1. Import SweetAlert2 di sini
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -8,23 +11,110 @@ const RED = '#C0392B'
 
 export default function FinalAnalyze() {
   const navigate = useNavigate()
+  const [loadingSimpan, setLoadingSimpan] = useState(false)
 
-  // ===== AMBIL HASIL ANALISIS REAL-TIME DARI LOCALSTORAGE =====
-  const penghasilan      = parseInt(localStorage.getItem('analisis_pemasukan')   || localStorage.getItem('penghasilan') || '0')
-  const totalPengeluaran = parseInt(localStorage.getItem('analisis_pengeluaran') || '0')
-  const tabungan         = parseInt(localStorage.getItem('analisis_tabungan')    || '0')
-  const persen           = parseInt(localStorage.getItem('analisis_persen')       || '0')
-  const namaUser         = localStorage.getItem('namaUser')                      || 'Lila Mahasiswa'
-  const pesanAnalisis    = localStorage.getItem('analisis_pesan')                 || 'Belum ada data analisis. Silakan atur anggaran kamu di menu Budget Planner terlebih dahulu.'
+  // ===== INTI STATE SINKRONISASI =====
+  const [analisis, setAnalisis] = useState({
+    penghasilan: 0,
+    totalPengeluaran: 0,
+    tabungan: 0,
+    persen: 0,
+    namaUser: 'User',
+    pesanAnalisis: 'Belum ada data analisis. Silakan atur anggaran kamu di menu Budget Planner terlebih dahulu.',
+    kategori: 'konservatif'
+  })
 
-  // Normalisasi string kategori agar pencocokan objek key di bawah tidak meleset
-  const kategoriRaw      = localStorage.getItem('analisis_kategori')             || 'konservatif'
-  const kategori         = kategoriRaw.toLowerCase().includes('agresif') ? 'agresif' : 
-                           kategoriRaw.toLowerCase().includes('moderat')  ? 'moderat'  : 'konservatif'
+  useEffect(() => {
+    // Ambil hasil analisis real-time dari localStorage saat halaman diload
+    const income = parseInt(localStorage.getItem('analisis_pemasukan') || localStorage.getItem('penghasilan') || '0')
+    const expense = parseInt(localStorage.getItem('analisis_pengeluaran') || '0')
+    const saving = parseInt(localStorage.getItem('analisis_tabungan') || '0')
+    const percentage = parseInt(localStorage.getItem('analisis_persen') || '0')
+    
+    // PERBAIKAN: Menggunakan key terpusat 'user_name' agar seragam dengan Dashboard
+    const user = localStorage.getItem('user_name') || 'User'
+    
+    const msg = localStorage.getItem('analisis_pesan') || 'Belum ada data analisis. Silakan atur anggaran kamu di menu Budget Planner terlebih dahulu.'
+    
+    // Normalisasi string kategori risiko dari DB
+    const kategoriRaw = localStorage.getItem('analisis_kategori') || 'konservatif'
+    let finalKategori = 'konservatif'
+    if (kategoriRaw.toLowerCase().includes('agresif')) finalKategori = 'agresif'
+    if (kategoriRaw.toLowerCase().includes('moderat')) finalKategori = 'moderat'
+
+    setAnalisis({
+      penghasilan: income,
+      totalPengeluaran: expense,
+      tabungan: saving,
+      persen: percentage,
+      namaUser: user,
+      pesanAnalisis: msg,
+      kategori: finalKategori
+    })
+  }, [])
+
+  // ===== FUNGSI KIRIM HASIL KE LARAVEL DATABASE =====
+  const handleSimpanAnalisis = async () => {
+    setLoadingSimpan(true)
+    try {
+      const token = localStorage.getItem('token')
+      
+      const dataKirim = {
+        total_pemasukan: analisis.penghasilan,
+        budget_pokok: Math.round(analisis.totalPengeluaran * 0.7), // Asumsi 70% dari pengeluaran adalah pokok
+        budget_keinginan: Math.round(analisis.totalPengeluaran * 0.3), // Asumsi 30% sisanya keinginan
+        budget_tabungan: analisis.tabungan
+      }
+
+      const response = await axios.post('http://127.0.0.1:8000/api/final-analyze/save', dataKirim, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.data.success) {
+        localStorage.setItem('user_name', analisis.namaUser)
+        
+        // 2. MODIFIKASI: Pop-up Sukses yang Keren
+        Swal.fire({
+          title: 'Analisis Tersimpan!',
+          text: 'Data analisis keuanganmu berhasil disimpan ke sistem.',
+          icon: 'success',
+          iconColor: GOLD,
+          confirmButtonColor: MAROON,
+          confirmButtonText: 'Ke Dashboard 👋',
+          background: CREAM,
+          customClass: {
+            title: 'swal-title-custom',
+            htmlContainer: 'swal-text-custom'
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            navigate('/dashboard')
+          }
+        })
+      }
+    } catch (error) {
+      console.error("Gagal mengirim hasil analisis ke backend:", error)
+      
+      // 3. MODIFIKASI: Pop-up Gagal / Fallback
+      Swal.fire({
+        title: 'Sinkronisasi Gagal',
+        text: 'Gagal terhubung ke server. Kamu akan tetap diarahkan ke Dashboard.',
+        icon: 'warning',
+        iconColor: GOLD,
+        confirmButtonColor: MAROON,
+        confirmButtonText: 'Lanjutkan',
+        background: CREAM
+      }).then(() => {
+        navigate('/dashboard')
+      })
+    } finally {
+      setLoadingSimpan(false)
+    }
+  }
 
   const formatRp = (val) => parseInt(val || 0).toLocaleString('id-ID')
 
-  // Data Base Info Kategori Struktural
+  // Data Base Info Kategori map
   const kategoriInfo = {
     konservatif: {
       label: 'Risiko Konservatif',
@@ -49,11 +139,10 @@ export default function FinalAnalyze() {
     }
   }
 
-  // ===== STRUKTUR SUMMARY CARDS DENGAN DATA REAL-TIME =====
   const summaryCards = [
     {
       label: 'TOTAL PEMASUKAN',
-      value: `Rp ${formatRp(penghasilan)}`,
+      value: `Rp ${formatRp(analisis.penghasilan)}`,
       sub: 'Bulan ini',
       color: MAROON,
       subColor: '#9CA3AF',
@@ -61,25 +150,25 @@ export default function FinalAnalyze() {
     },
     {
       label: 'TOTAL PENGELUARAN',
-      value: `Rp ${formatRp(totalPengeluaran)}`,
-      sub: `${persen}% terpakai`,
-      color: totalPengeluaran > penghasilan ? RED : MAROON,
+      value: `Rp ${formatRp(analisis.totalPengeluaran)}`,
+      sub: `${analisis.persen}% terpakai`,
+      color: analisis.totalPengeluaran > analisis.penghasilan ? RED : MAROON,
       subColor: GOLD,
       badge: true
     },
     {
       label: 'TABUNGAN BULAN INI',
-      value: `Rp ${formatRp(tabungan)}`,
-      sub: tabungan < (penghasilan * 0.1) ? 'Di bawah target' : 'Sesuai target',
+      value: `Rp ${formatRp(analisis.tabungan)}`,
+      sub: analisis.tabungan < (analisis.penghasilan * 0.1) ? 'Di bawah target' : 'Sesuai target',
       color: GREEN,
       subColor: GOLD,
       badge: true
     },
     {
       label: 'PROFIL RISIKO',
-      value: kategoriInfo[kategori]?.label.split(' ')[1] || 'Konservatif',
+      value: kategoriInfo[analisis.kategori]?.label.split(' ')[1] || 'Konservatif',
       sub: 'Berdasarkan alokasi budget',
-      color: kategori === 'agresif' ? RED : kategori === 'moderat' ? GREEN : '#3B82F6',
+      color: analisis.kategori === 'agresif' ? RED : analisis.kategori === 'moderat' ? GREEN : '#3B82F6',
       subColor: '#9CA3AF',
       badge: false
     },
@@ -95,6 +184,10 @@ export default function FinalAnalyze() {
         .nav-link:hover { background:rgba(255,255,255,0.15); }
         .card-item { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .card-item:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }
+        
+        /* Penyesuaian font font SweetAlert2 agar senada dengan Poppins */
+        .swal-title-custom { font-family: 'Poppins', sans-serif !important; font-weight: 700 !important; color: ${MAROON} !important; }
+        .swal-text-custom { font-family: 'Poppins', sans-serif !important; color: #4B5563 !important; font-size: 14px !important; }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
@@ -117,9 +210,11 @@ export default function FinalAnalyze() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>LM</span>
+              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
+                {analisis.namaUser.substring(0, 2).toUpperCase()}
+              </span>
             </div>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{namaUser}</span>
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{analisis.namaUser}</span>
           </div>
         </nav>
 
@@ -138,7 +233,7 @@ export default function FinalAnalyze() {
                 <p style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', fontWeight: '600' }}>{item.label}</p>
                 <p style={{ fontSize: '20px', fontWeight: '700', color: item.color, marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.value}</p>
                 {item.badge ? (
-                  <span style={{ display: 'inline-block', backgroundColor: item.label.includes('PENGELUARAN') && persen > 80 ? RED : GOLD, color: 'white', fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>{item.sub}</span>
+                  <span style={{ display: 'inline-block', backgroundColor: item.label.includes('PENGELUARAN') && analisis.persen > 80 ? RED : GOLD, color: 'white', fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>{item.sub}</span>
                 ) : (
                   <p style={{ fontSize: '13px', color: item.subColor }}>{item.sub}</p>
                 )}
@@ -154,7 +249,7 @@ export default function FinalAnalyze() {
             </div>
 
             {Object.entries(kategoriInfo).map(([key, info]) => {
-              const isProfileAktif = kategori === key;
+              const isProfileAktif = analisis.kategori === key;
               return (
                 <div key={key} style={{
                   backgroundColor: isProfileAktif ? info.bg : '#F9FAFB',
@@ -175,22 +270,23 @@ export default function FinalAnalyze() {
                   </div>
                   
                   <p style={{ fontSize: '13px', color: isProfileAktif ? '#374151' : '#9CA3AF', lineHeight: '1.6', fontWeight: isProfileAktif ? '500' : '400' }}>
-                    {isProfileAktif ? pesanAnalisis : info.desc}
+                    {isProfileAktif ? analisis.pesanAnalisis : info.desc}
                   </p>
                 </div>
               );
             })}
           </div>
 
-          {/* BACK TO DASHBOARD SHORTCUT */}
+          {/* ACTION BUTTON */}
           <div style={{ textAlign: 'center', marginTop: '24px' }}>
             <button 
-              onClick={() => navigate('/dashboard')} 
-              style={{ padding: '12px 28px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 12px rgba(107,15,26,0.15)', transition: 'all 0.2s' }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#540B14'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = MAROON}
+              onClick={handleSimpanAnalisis} 
+              disabled={loadingSimpan}
+              style={{ padding: '12px 32px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 12px rgba(107,15,26,0.15)', transition: 'all 0.2s', opacity: loadingSimpan ? 0.7 : 1 }}
+              onMouseOver={(e) => { if(!loadingSimpan) e.currentTarget.style.backgroundColor = '#540B14' }}
+              onMouseOut={(e) => { if(!loadingSimpan) e.currentTarget.style.backgroundColor = MAROON }}
             >
-              ← Kembali ke Dashboard
+              {loadingSimpan ? 'Menyimpan Hasil...' : '✓ Simpan & Selesai Analisis'}
             </button>
           </div>
 
