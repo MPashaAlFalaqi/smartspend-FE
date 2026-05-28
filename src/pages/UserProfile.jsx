@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import axios from 'axios'
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -14,17 +15,19 @@ export default function UserProfile() {
   const [saved, setSaved] = useState(false)
   const [savedMessage, setSavedMessage] = useState('')
 
-  const namaUser = localStorage.getItem('namaUser') || 'Andi Pratama'
+  // Ambil data awal dari localStorage dengan fallback yang aman
+  const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
+  const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
 
   // State Form Utama
   const [form, setForm] = useState({
-    nama: namaUser,
-    username: 'andipratama',
+    nama: localStorage.getItem('user_name') || 'User',
+    username: localStorage.getItem('user_username') || 'user',
     noHp: '+62 812-3456-7890',
     tanggalLahir: '15 Maret 1998',
     jenisKelamin: 'Laki-laki',
     kota: 'Malang, Jawa Timur',
-    email: 'andi@email.com',
+    email: localStorage.getItem('user_email') || 'user@email.com',
   })
 
   // State Form Keamanan
@@ -32,9 +35,76 @@ export default function UserProfile() {
     passwordLama: '',
     passwordBaru: '',
     konfirmasiPassword: '',
-    emailBaru: form.email,
-    noHpBaru: form.noHp,
+    emailBaru: localStorage.getItem('user_email') || 'user@email.com',
+    noHpBaru: '+62 812-3456-7890',
   })
+
+  // Helper pintar untuk membuat inisial nama tanpa bikin aplikasi crash
+  const getInitials = (nameString) => {
+    if (!nameString || typeof nameString !== 'string') return 'US'
+    const cleanName = nameString.trim()
+    if (!cleanName) return 'US'
+    return cleanName.split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  }
+
+  // SINKRONISASI LIVE: Mengambil dan mendeteksi struktur data dari API Laravel
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (userRes.data) {
+          // Otomatis deteksi jika Laravel membungkus data di dalam objek "user" atau "data"
+          const userData = userRes.data.user || userRes.data.data || userRes.data
+
+          // Deteksi variasi penamaan key database dari backend
+          const fetchedName = userData.name || userData.nama || userData.user_name || 'User'
+          const fetchedEmail = userData.email || 'user@email.com'
+          const fetchedUsername = userData.username || userData.user_name || fetchedName.toLowerCase().replace(/\s+/g, '')
+          const fetchedNoHp = userData.no_hp || userData.phone || '+62 812-3456-7890'
+          const fetchedTglLahir = userData.tanggal_lahir || userData.tanggalLahir || '15 Maret 1998'
+          const fetchedGender = userData.jenis_kelamin || userData.jenisKelamin || 'Laki-laki'
+          const fetchedKota = userData.kota || userData.city || 'Malang, Jawa Timur'
+
+          // Update State Atas (Navbar)
+          setNamaUser(fetchedName)
+          setEmailUser(fetchedEmail)
+          
+          // Update State Form Utama
+          setForm({
+            nama: fetchedName,
+            username: fetchedUsername,
+            noHp: fetchedNoHp,
+            tanggalLahir: fetchedTglLahir,
+            jenisKelamin: fetchedGender,
+            kota: fetchedKota,
+            email: fetchedEmail
+          })
+          
+          // Update State Form Keamanan
+          setSecurityForm(prev => ({
+            ...prev,
+            emailBaru: fetchedEmail,
+            noHpBaru: fetchedNoHp
+          }))
+
+          // Amankan data ke localStorage agar komponen lain (Dashboard) ikut ter-update
+          localStorage.setItem('user_name', fetchedName)
+          localStorage.setItem('user_email', fetchedEmail)
+          localStorage.setItem('user_username', fetchedUsername)
+        }
+      } catch (error) {
+        console.error('Gagal memuat informasi profil dari server:', error)
+      }
+    }
+
+    fetchUserData()
+  }, [])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -48,7 +118,12 @@ export default function UserProfile() {
 
   const handleSaveProfil = (e) => {
     e.preventDefault()
-    localStorage.setItem('namaUser', form.nama)
+    
+    // Simpan ke localStorage agar perubahan langsung ngefek di tempat lain
+    localStorage.setItem('user_name', form.nama)
+    localStorage.setItem('user_username', form.username)
+    
+    setNamaUser(form.nama)
     triggerNotif('Perubahan informasi pribadi berhasil disimpan!')
   }
 
@@ -58,11 +133,13 @@ export default function UserProfile() {
       alert('Konfirmasi password baru tidak cocok!')
       return
     }
-    setForm({
-      ...form,
+    setForm(prev => ({
+      ...prev,
       email: securityForm.emailBaru,
       noHp: securityForm.noHpBaru
-    })
+    }))
+    setEmailUser(securityForm.emailBaru)
+    localStorage.setItem('user_email', securityForm.emailBaru)
     triggerNotif('Pengaturan keamanan berhasil diperbarui!')
   }
 
@@ -72,7 +149,6 @@ export default function UserProfile() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  // Menu Profil Risiko sudah dihapus dari daftar ini
   const menus = [
     { key: 'profil', icon: '👤', label: 'Informasi Pribadi' },
     { key: 'keamanan', icon: '🔒', label: 'Keamanan' },
@@ -108,7 +184,7 @@ export default function UserProfile() {
 
         {/* NAVBAR */}
         <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
             </svg>
@@ -116,7 +192,6 @@ export default function UserProfile() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Link to="/login" className="nav-link">Login</Link>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/risk-profile" className="nav-link">Risk Profile</Link>
             <Link to="/budget-planner" className="nav-link">Budget Planner</Link>
@@ -126,7 +201,7 @@ export default function UserProfile() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
-                {namaUser.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                {getInitials(namaUser)}
               </span>
             </div>
             <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{namaUser}</span>
@@ -144,7 +219,7 @@ export default function UserProfile() {
                 <div style={{ position: 'relative', display: 'inline-block', marginBottom: '12px' }}>
                   <div style={{ width: '80px', height: '80px', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
                     <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
-                      {form.nama.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      {getInitials(form.nama)}
                     </span>
                   </div>
                   <div style={{ position: 'absolute', bottom: 0, right: 0, width: '24px', height: '24px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>
@@ -188,7 +263,7 @@ export default function UserProfile() {
           <div style={{ flex: 1 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '36px 40px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
 
-              {/* Notifikasi Berhasil Disimpan global */}
+              {/* Notifikasi Berhasil Disimpan */}
               {saved && (
                 <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: GREEN, fontSize: '13px', fontWeight: '500' }}>
                   ✅ {savedMessage}
@@ -207,19 +282,19 @@ export default function UserProfile() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                       <div>
                         <label style={labelStyle}>NAMA LENGKAP</label>
-                        <input name="nama" value={form.nama} onChange={handleChange} style={inputStyle} />
+                        <input name="nama" value={form.nama || ''} onChange={handleChange} style={inputStyle} />
                       </div>
                       <div>
                         <label style={labelStyle}>USERNAME</label>
-                        <input name="username" value={form.username} onChange={handleChange} style={inputStyle} />
+                        <input name="username" value={form.username || ''} onChange={handleChange} style={inputStyle} />
                       </div>
                       <div>
                         <label style={labelStyle}>TANGGAL LAHIR</label>
-                        <input name="tanggalLahir" value={form.tanggalLahir} onChange={handleChange} style={inputStyle} />
+                        <input name="tanggalLahir" value={form.tanggalLahir || ''} onChange={handleChange} style={inputStyle} />
                       </div>
                       <div>
                         <label style={labelStyle}>KOTA DOMISILI</label>
-                        <input name="kota" value={form.kota} onChange={handleChange} style={inputStyle} />
+                        <input name="kota" value={form.kota || ''} onChange={handleChange} style={inputStyle} />
                       </div>
                     </div>
 
@@ -264,11 +339,11 @@ export default function UserProfile() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                       <div>
                         <label style={labelStyle}>ALAMAT EMAIL</label>
-                        <input name="emailBaru" type="email" value={securityForm.emailBaru} onChange={handleSecurityChange} style={inputStyle} />
+                        <input name="emailBaru" type="email" value={securityForm.emailBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
                       </div>
                       <div>
                         <label style={labelStyle}>NOMOR HP</label>
-                        <input name="noHpBaru" type="text" value={securityForm.noHpBaru} onChange={handleSecurityChange} style={inputStyle} />
+                        <input name="noHpBaru" type="text" value={securityForm.noHpBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
                       </div>
                     </div>
 
@@ -277,16 +352,16 @@ export default function UserProfile() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
                       <div>
                         <label style={labelStyle}>PASSWORD LAMA</label>
-                        <input name="passwordLama" type="password" placeholder="••••••••" value={securityForm.passwordLama} onChange={handleSecurityChange} style={inputStyle} />
+                        <input name="passwordLama" type="password" placeholder="••••••••" value={securityForm.passwordLama || ''} onChange={handleSecurityChange} style={inputStyle} />
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                         <div>
                           <label style={labelStyle}>PASSWORD BARU</label>
-                          <input name="passwordBaru" type="password" placeholder="••••••••" value={securityForm.passwordBaru} onChange={handleSecurityChange} style={inputStyle} />
+                          <input name="passwordBaru" type="password" placeholder="••••••••" value={securityForm.passwordBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
                         </div>
                         <div>
                           <label style={labelStyle}>KONFIRMASI PASSWORD BARU</label>
-                          <input name="konfirmasiPassword" type="password" placeholder="••••••••" value={securityForm.konfirmasiPassword} onChange={handleSecurityChange} style={inputStyle} />
+                          <input name="konfirmasiPassword" type="password" placeholder="••••••••" value={securityForm.konfirmasiPassword || ''} onChange={handleSecurityChange} style={inputStyle} />
                         </div>
                       </div>
                     </div>
@@ -313,7 +388,7 @@ export default function UserProfile() {
             <p style={{ color: '#6B7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '28px' }}>Kamu akan keluar dari sesi SmartSpend.</p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', backgroundColor: 'white', border: `1.5px solid ${MAROON}`, color: MAROON, borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Batal</button>
-              <button onClick={() => navigate('/')} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Ya, Keluar 🚪</button>
+              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Ya, Keluar 🚪</button>
             </div>
           </div>
         </div>

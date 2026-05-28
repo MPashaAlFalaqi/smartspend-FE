@@ -12,8 +12,15 @@ export default function Register() {
   const [showSK, setShowSK] = useState(false)
   const [showPrivasi, setShowPrivasi] = useState(false)
 
+  // ===== UPDATE STATE: Tambah username dan no_hp =====
   const [formData, setFormData] = useState({
-    nama: '', email: '', password: '', konfirmasi: '', setuju: false
+    nama: '', 
+    username: '', 
+    email: '', 
+    no_hp: '', 
+    password: '', 
+    konfirmasi: '', 
+    setuju: false
   })
   const [passwordStrength, setPasswordStrength] = useState(0)
 
@@ -107,7 +114,8 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.nama || !formData.email || !formData.password || !formData.konfirmasi) {
+    // ===== UPDATE VALIDASI: Pastikan username dan no_hp ikut dicek =====
+    if (!formData.nama || !formData.username || !formData.email || !formData.no_hp || !formData.password || !formData.konfirmasi) {
       Swal.fire({ icon: 'warning', title: 'Opps..', text: 'Semua field wajib diisi!', confirmButtonColor: '#6B0F1A' })
       return
     }
@@ -129,6 +137,7 @@ export default function Register() {
         didOpen: () => { Swal.showLoading() }
       })
 
+      // ===== UPDATE BODY REQ: Kirim username dan no_hp ke Laravel Backend =====
       const response = await fetch('http://127.0.0.1:8000/api/register', {
         method: 'POST',
         headers: {
@@ -137,7 +146,9 @@ export default function Register() {
         },
         body: JSON.stringify({
           nama: formData.nama,
+          username: formData.username,
           email: formData.email,
+          no_hp: formData.no_hp,
           password: formData.password,
         })
       })
@@ -312,6 +323,15 @@ export default function Register() {
                   value={formData.nama} onChange={handleChange} style={inputStyle} />
               </div>
 
+              {/* ===== INPUT BARU: Username (Diletakkan setelah Nama Lengkap) ===== */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
+                  USERNAME
+                </label>
+                <input type="text" name="username" placeholder="Masukkan username unik"
+                  value={formData.username} onChange={handleChange} style={inputStyle} />
+              </div>
+
               {/* Email */}
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
@@ -319,6 +339,15 @@ export default function Register() {
                 </label>
                 <input type="email" name="email" placeholder="contoh@email.com"
                   value={formData.email} onChange={handleChange} style={inputStyle} />
+              </div>
+
+              {/* ===== INPUT BARU: Nomor HP (Diletakkan setelah Alamat Email) ===== */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
+                  NOMOR HP
+                </label>
+                <input type="tel" name="no_hp" placeholder="Contoh: 08123456789"
+                  value={formData.no_hp} onChange={handleChange} style={inputStyle} />
               </div>
 
               {/* Password */}

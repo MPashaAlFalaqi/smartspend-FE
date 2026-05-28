@@ -30,15 +30,34 @@ const listPilihanIcon = ['📌', '🛒', '🍔', '🎮', '🍿', '🚗', '💊',
 
 export default function BudgetPlanner() {
   const navigate = useNavigate()
+  
+  // State untuk melacak nama user di Navbar agar sinkron dengan localStorage
+  const [namaUser, setNamaUser] = useState(
+    localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User'
+  )
+
   const [pemasukan, setPemasukan] = useState(0)
   const [activeTab, setActiveTab] = useState('pokok')
   const [kategori, setKategori] = useState(defaultKategori)
   const [saved, setSaved] = useState(false)
 
+  // STATE BARU: Untuk melacak item mana yang sedang diedit namanya
+  const [editMode, setEditMode] = useState({ tab: null, id: null })
+
   // STATE MODAL PREMIUM
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [inputNamaKategori, setInputNamaKategori] = useState('')
   const [selectedIcon, setSelectedIcon] = useState('📌')
+
+  // Mengambil inisial nama (maksimal 2 huruf) untuk lingkaran avatar di Navbar
+  const getInisial = (nama) => {
+    if (!nama) return 'U'
+    const kata = nama.trim().split(' ')
+    if (kata.length > 1) {
+      return (kata[0][0] + kata[1][0]).toUpperCase()
+    }
+    return kata[0].substring(0, 2).toUpperCase()
+  }
 
   const formatRp = (val) => val.toLocaleString('id-ID')
 
@@ -107,11 +126,24 @@ export default function BudgetPlanner() {
     loadSavedBudget()
   }, [])
 
+  // Membersihkan titik saat diketik agar state tetap menyimpan angka murni (integer)
   const handleJumlah = (tab, id, val) => {
+    const rawValue = val.replace(/[^0-9]/g, '') // Hapus karakter selain angka tumbuhan
+
     setKategori(prev => ({
       ...prev,
       [tab]: prev[tab].map(k =>
-        k.id === id ? { ...k, jumlah: parseInt(val) || 0 } : k
+        k.id === id ? { ...k, jumlah: parseInt(rawValue) || 0 } : k
+      )
+    }))
+  }
+
+  // Fungsi untuk mengubah nama kategori secara langsung
+  const handleUbahNama = (tab, id, val) => {
+    setKategori(prev => ({
+      ...prev,
+      [tab]: prev[tab].map(k =>
+        k.id === id ? { ...k, nama: val } : k
       )
     }))
   }
@@ -200,8 +232,8 @@ export default function BudgetPlanner() {
           tabungan_investasi: totalTabungan,
           bulan: targetBulan,
           tahun: targetTahun,
-          kategori_risiko: kategoriRisiko, // KOLOM BARU SINKRON DB
-          pesan_analisis: pesanAnalisis     // KOLOM BARU SINKRON DB
+          kategori_risiko: kategoriRisiko,
+          pesan_analisis: pesanAnalisis
         })
       })
 
@@ -259,6 +291,10 @@ export default function BudgetPlanner() {
         .icon-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); border-color:${GOLD} !important; }
         .btn-dash { transition: all 0.2s ease; }
         .btn-dash:hover { background-color: rgba(107,15,26,0.02) !important; transform: translateY(-1px); }
+        
+        .action-btn { transition: all 0.2s; }
+        .action-btn:hover { transform: scale(1.05); }
+        .action-btn:active { transform: scale(0.95); }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
@@ -280,9 +316,13 @@ export default function BudgetPlanner() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>LM</span>
+              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
+                {getInisial(namaUser)}
+              </span>
             </div>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>Lila Mahasiswa</span>
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>
+              {namaUser}
+            </span>
           </div>
         </nav>
 
@@ -335,16 +375,66 @@ export default function BudgetPlanner() {
                 <div style={{ width: '44px', height: '44px', backgroundColor: activeTab === 'pokok' ? '#FFF3E0' : activeTab === 'keinginan' ? '#F3E5F5' : '#E8F5E9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                   {item.icon}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: '600', fontSize: '14px', color: '#1A1A1A', marginBottom: '2px' }}>{item.nama}</p>
+                
+                {/* Bagian Nama - Bisa Teks Biasa / Input Mode Edit */}
+                <div style={{ flex: 1, paddingRight: '16px' }}>
+                  {editMode.tab === activeTab && editMode.id === item.id ? (
+                    <input 
+                      type="text" 
+                      value={item.nama} 
+                      onChange={e => handleUbahNama(activeTab, item.id, e.target.value)}
+                      autoFocus
+                      onBlur={() => setEditMode({ tab: null, id: null })}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setEditMode({ tab: null, id: null }) }}
+                      style={{ 
+                        fontWeight: '600', 
+                        fontSize: '14px', 
+                        color: '#1A1A1A', 
+                        marginBottom: '2px',
+                        width: '100%',
+                        border: 'none',
+                        borderBottom: `2px solid ${MAROON}`,
+                        backgroundColor: 'transparent',
+                        padding: '2px 0',
+                        outline: 'none',
+                        fontFamily: 'inherit'
+                      }} 
+                    />
+                  ) : (
+                    <p style={{ fontWeight: '600', fontSize: '14px', color: '#1A1A1A', marginBottom: '2px' }}>{item.nama}</p>
+                  )}
                   <p style={{ fontSize: '12px', color: '#9CA3AF' }}>Batas anggaran</p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+
+                {/* Kolom Actions (Input Nominal, Edit, Delete) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', fontSize: '13px', fontWeight: '500' }}>Rp</span>
-                    <input type="number" value={item.jumlah === 0 ? '' : item.jumlah} onChange={e => handleJumlah(activeTab, item.id, e.target.value)} style={{ width: '180px', height: '44px', padding: '0 12px 0 36px', border: '1.5px solid #E5E7EB', borderRadius: '10px', fontSize: '14px', fontWeight: '600', color: '#1A1A1A', backgroundColor: '#FAFAFA', textAlign: 'right' }} />
+                    <input 
+                      type="text" 
+                      value={item.jumlah === 0 ? '' : formatRp(item.jumlah)} 
+                      onChange={e => handleJumlah(activeTab, item.id, e.target.value)} 
+                      style={{ width: '180px', height: '44px', padding: '0 12px 0 36px', border: '1.5px solid #E5E7EB', borderRadius: '10px', fontSize: '14px', fontWeight: '600', color: '#1A1A1A', backgroundColor: '#FAFAFA', textAlign: 'right' }} 
+                    />
                   </div>
-                  <button type="button" onClick={() => handleHapus(activeTab, item.id)} style={{ width: '40px', height: '40px', border: 'none', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', cursor: 'pointer', fontSize: '18px', fontWeight: '700' }}>×</button>
+                  
+                  {/* Tombol Pensil (Edit) atau Centang (Save) */}
+                  {editMode.tab === activeTab && editMode.id === item.id ? (
+                    <button type="button" className="action-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => setEditMode({ tab: null, id: null })} style={{ width: '42px', height: '42px', border: 'none', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#16A34A', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ✔️
+                    </button>
+                  ) : (
+                    <button type="button" className="action-btn" onClick={() => setEditMode({ tab: activeTab, id: item.id })} style={{ width: '42px', height: '42px', border: 'none', borderRadius: '10px', backgroundColor: '#F3F4F6', color: '#4B5563', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      ✏️
+                    </button>
+                  )}
+
+                  {/* Tombol Hapus */}
+                  <button type="button" className="action-btn" onClick={() => handleHapus(activeTab, item.id)} style={{ width: '42px', height: '42px', border: 'none', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', cursor: 'pointer', fontSize: '24px', fontWeight: '400', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    ×
+                  </button>
+
                 </div>
               </div>
             ))}
