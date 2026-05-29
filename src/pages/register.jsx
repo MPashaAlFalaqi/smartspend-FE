@@ -52,15 +52,18 @@ export default function Register() {
         const data = await response.json()
 
         if (response.ok) {
+          // DISINKRONKAN: Menyimpan info esensial ke localStorage agar dibaca oleh UserProfile
           localStorage.setItem('token', data.token)
-          localStorage.setItem('namaUser', data.user.nama)
+          localStorage.setItem('user_name', data.user.nama || data.user.name)
+          localStorage.setItem('user_email', data.user.email)
+          localStorage.setItem('user_username', data.user.username || '')
           localStorage.setItem('role', 'user') 
           
           // Pop-up sukses estetik warna marun
           Swal.fire({
             icon: 'success',
             title: 'Registrasi Berhasil!',
-            text: `Selamat bergabung di SmartSpend, ${data.user.nama}!`,
+            text: `Selamat bergabung di SmartSpend, ${data.user.nama || data.user.name}!`,
             showConfirmButton: false,
             timer: 2000,
             timerProgressBar: true,
@@ -156,6 +159,11 @@ export default function Register() {
       const data = await response.json()
 
       if (response.ok) {
+        // DISINKRONKAN: Cadangkan data pendaftaran lokal agar langsung ter-render di UserProfile sebelum fetch backend selesai
+        localStorage.setItem('user_name', formData.nama)
+        localStorage.setItem('user_username', formData.username)
+        localStorage.setItem('user_email', formData.email)
+
         Swal.fire({
           icon: 'success',
           title: 'Akun Berhasil Dibuat!',
@@ -165,7 +173,7 @@ export default function Register() {
           timerProgressBar: true,
           iconColor: '#6B0F1A'
         })
-        setTimeout(() => navigate('/'), 2000)
+        setTimeout(() => navigate('/'), 2000) // Mengarah ke halaman login utama Anda
       } else {
         Swal.fire({ icon: 'error', title: 'Gagal Registrasi', text: data.message || 'Terjadi kesalahan saat mendaftar.', confirmButtonColor: '#6B0F1A' })
       }
@@ -323,7 +331,7 @@ export default function Register() {
                   value={formData.nama} onChange={handleChange} style={inputStyle} />
               </div>
 
-              {/* ===== INPUT BARU: Username (Diletakkan setelah Nama Lengkap) ===== */}
+              {/* Username */}
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   USERNAME
@@ -341,7 +349,7 @@ export default function Register() {
                   value={formData.email} onChange={handleChange} style={inputStyle} />
               </div>
 
-              {/* ===== INPUT BARU: Nomor HP (Diletakkan setelah Alamat Email) ===== */}
+              {/* Nomor HP */}
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   NOMOR HP

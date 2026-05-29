@@ -11,6 +11,11 @@ const RED = '#C0392B'
 export default function History() {
   const navigate = useNavigate()
   
+  // ===== STATE NAMA USER DINAMIS =====
+  const [namaUser, setNamaUser] = useState(
+    localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User'
+  )
+
   // ===== STATE UTAMA =====
   const [transaksiData, setTransaksiData] = useState([])
   const [filterDate, setFilterDate] = useState('2026-05-01') // Menyesuaikan default ke tahun berjalan (2026)
@@ -28,9 +33,22 @@ export default function History() {
 
   const formatRp = (val) => parseInt(val || 0).toLocaleString('id-ID')
 
+  // Helper untuk Inisial Nama (Misal: "karma" -> "KA", "Budi Santoso" -> "BS")
+  const getInisial = (nama) => {
+    if (!nama) return 'U'
+    const kata = nama.trim().split(' ')
+    if (kata.length > 1) return (kata[0][0] + kata[1][0]).toUpperCase()
+    return kata[0].substring(0, 2).toUpperCase()
+  }
+
   // Helper Kalender
   const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
   const hariSingkat = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+
+  // Update nama jika ada perubahan di localStorage saat komponen dimount
+  useEffect(() => {
+    setNamaUser(localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User')
+  }, [])
 
   // Tutup picker jika klik luar
   useEffect(() => {
@@ -147,8 +165,10 @@ export default function History() {
             <Link to="/final-analyze" className="nav-link">Final Analyze</Link>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-            <div style={{ width:'36px', height:'36px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}><span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>LM</span></div>
-            <span style={{ color:'white', fontSize:'14px' }}>Lila Mahasiswa</span>
+            <div style={{ width:'36px', height:'36px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>{getInisial(namaUser)}</span>
+            </div>
+            <span style={{ color:'white', fontSize:'14px', fontWeight: '500' }}>{namaUser}</span>
           </div>
         </nav>
 

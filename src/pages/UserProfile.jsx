@@ -15,31 +15,27 @@ export default function UserProfile() {
   const [saved, setSaved] = useState(false)
   const [savedMessage, setSavedMessage] = useState('')
 
-  // Ambil data awal dari localStorage dengan fallback yang aman
   const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
   const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
 
-  // State Form Utama
   const [form, setForm] = useState({
     nama: localStorage.getItem('user_name') || 'User',
     username: localStorage.getItem('user_username') || 'user',
-    noHp: '+62 812-3456-7890',
-    tanggalLahir: '15 Maret 1998',
+    noHp: '',
+    tanggalLahir: '',
     jenisKelamin: 'Laki-laki',
-    kota: 'Malang, Jawa Timur',
+    kota: '',
     email: localStorage.getItem('user_email') || 'user@email.com',
   })
 
-  // State Form Keamanan
   const [securityForm, setSecurityForm] = useState({
     passwordLama: '',
     passwordBaru: '',
     konfirmasiPassword: '',
     emailBaru: localStorage.getItem('user_email') || 'user@email.com',
-    noHpBaru: '+62 812-3456-7890',
+    noHpBaru: '',
   })
 
-  // Helper pintar untuk membuat inisial nama tanpa bikin aplikasi crash
   const getInitials = (nameString) => {
     if (!nameString || typeof nameString !== 'string') return 'US'
     const cleanName = nameString.trim()
@@ -47,7 +43,6 @@ export default function UserProfile() {
     return cleanName.split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()
   }
 
-  // SINKRONISASI LIVE: Mengambil dan mendeteksi struktur data dari API Laravel
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -59,23 +54,18 @@ export default function UserProfile() {
         })
 
         if (userRes.data) {
-          // Otomatis deteksi jika Laravel membungkus data di dalam objek "user" atau "data"
-          const userData = userRes.data.user || userRes.data.data || userRes.data
-
-          // Deteksi variasi penamaan key database dari backend
-          const fetchedName = userData.name || userData.nama || userData.user_name || 'User'
+          const userData = userRes.data
+          const fetchedName = userData.nama || 'User'
           const fetchedEmail = userData.email || 'user@email.com'
-          const fetchedUsername = userData.username || userData.user_name || fetchedName.toLowerCase().replace(/\s+/g, '')
-          const fetchedNoHp = userData.no_hp || userData.phone || '+62 812-3456-7890'
-          const fetchedTglLahir = userData.tanggal_lahir || userData.tanggalLahir || '15 Maret 1998'
-          const fetchedGender = userData.jenis_kelamin || userData.jenisKelamin || 'Laki-laki'
-          const fetchedKota = userData.kota || userData.city || 'Malang, Jawa Timur'
+          const fetchedUsername = userData.username || ''
+          const fetchedNoHp = userData.no_hp || ''
+          const fetchedTglLahir = userData.tanggal_lahir || ''
+          const fetchedGender = userData.jenis_kelamin || 'Laki-laki'
+          const fetchedKota = userData.kota || ''
 
-          // Update State Atas (Navbar)
           setNamaUser(fetchedName)
           setEmailUser(fetchedEmail)
           
-          // Update State Form Utama
           setForm({
             nama: fetchedName,
             username: fetchedUsername,
@@ -86,23 +76,20 @@ export default function UserProfile() {
             email: fetchedEmail
           })
           
-          // Update State Form Keamanan
           setSecurityForm(prev => ({
             ...prev,
             emailBaru: fetchedEmail,
             noHpBaru: fetchedNoHp
           }))
 
-          // Amankan data ke localStorage agar komponen lain (Dashboard) ikut ter-update
           localStorage.setItem('user_name', fetchedName)
           localStorage.setItem('user_email', fetchedEmail)
           localStorage.setItem('user_username', fetchedUsername)
         }
       } catch (error) {
-        console.error('Gagal memuat informasi profil dari server:', error)
+        console.error('Gagal memuat profil dari backend:', error)
       }
     }
-
     fetchUserData()
   }, [])
 
@@ -116,31 +103,61 @@ export default function UserProfile() {
     setSaved(false)
   }
 
-  const handleSaveProfil = (e) => {
+  const handleSaveProfil = async (e) => {
     e.preventDefault()
-    
-    // Simpan ke localStorage agar perubahan langsung ngefek di tempat lain
-    localStorage.setItem('user_name', form.nama)
-    localStorage.setItem('user_username', form.username)
-    
-    setNamaUser(form.nama)
-    triggerNotif('Perubahan informasi pribadi berhasil disimpan!')
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      await axios.put('http://127.0.0.1:8000/api/user/update', {
+        name: form.nama,
+        username: form.username,
+        tanggal_lahir: form.tanggalLahir,
+        kota: form.kota,
+        jenis_kelamin: form.jenisKelamin
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      localStorage.setItem('user_name', form.nama)
+      localStorage.setItem('user_username', form.username)
+      setNamaUser(form.nama)
+      
+      triggerNotif('Perubahan informasi pribadi berhasil disimpan ke server!')
+    } catch (error) {
+      console.error(error)
+      alert('Gagal menyimpan perubahan ke database.')
+    }
   }
 
-  const handleSaveKeamanan = (e) => {
+  const handleSaveKeamanan = async (e) => {
     e.preventDefault()
     if (securityForm.passwordBaru !== securityForm.konfirmasiPassword) {
       alert('Konfirmasi password baru tidak cocok!')
       return
     }
-    setForm(prev => ({
-      ...prev,
-      email: securityForm.emailBaru,
-      noHp: securityForm.noHpBaru
-    }))
-    setEmailUser(securityForm.emailBaru)
-    localStorage.setItem('user_email', securityForm.emailBaru)
-    triggerNotif('Pengaturan keamanan berhasil diperbarui!')
+
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      await axios.put('http://127.0.0.1:8000/api/user/update-password', {
+        email: securityForm.emailBaru,
+        no_hp: securityForm.noHpBaru,
+        password_lama: securityForm.passwordLama,
+        password: securityForm.passwordBaru
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      setForm(prev => ({ ...prev, email: securityForm.emailBaru, noHp: securityForm.noHpBaru }))
+      setEmailUser(securityForm.emailBaru)
+      localStorage.setItem('user_email', securityForm.emailBaru)
+      
+      triggerNotif('Pengaturan keamanan berhasil diperbarui ke server!')
+    } catch (error) {
+      alert('Gagal memperbarui data keamanan. Pastikan password lama Anda benar.')
+    }
   }
 
   const triggerNotif = (msg) => {
@@ -149,22 +166,9 @@ export default function UserProfile() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  const menus = [
-    { key: 'profil', icon: '👤', label: 'Informasi Pribadi' },
-    { key: 'keamanan', icon: '🔒', label: 'Keamanan' },
-  ]
-
   const inputStyle = {
-    width: '100%', height: '46px', padding: '0 14px',
-    border: '1.5px solid #E5E7EB', borderRadius: '10px',
-    fontSize: '14px', boxSizing: 'border-box',
-    backgroundColor: '#FAFAFA', color: '#1A1A1A',
-    fontFamily: 'Poppins,sans-serif',
-  }
-
-  const labelStyle = {
-    fontSize: '12px', fontWeight: '600', display: 'block',
-    marginBottom: '6px', color: '#6B7280', letterSpacing: '0.3px',
+    width: '100%', height: '46px', padding: '0 14px', border: '1.5px solid #E5E7EB', borderRadius: '10px',
+    fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#FAFAFA', color: '#1A1A1A'
   }
 
   return (
@@ -172,208 +176,86 @@ export default function UserProfile() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
-        body { background:${CREAM}; }
-        .nav-link { color:white; text-decoration:none; font-size:14px; padding:6px 12px; border-radius:20px; transition:all 0.2s; }
+        .nav-link { color:white; text-decoration:none; font-size:14px; padding:6px 12px; border-radius:20px; }
         .nav-link:hover { background:rgba(255,255,255,0.15); }
-        .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; transition:all 0.2s; font-size:14px; }
-        .menu-item:hover { background:#F5F0E8; }
+        .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; font-size:14px; }
         input:focus { border-color:${MAROON} !important; outline:none; background:#fff !important; }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
-
         {/* NAVBAR */}
         <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-            </svg>
             <span style={{ color: GOLD, fontWeight: '700', fontSize: '20px' }}>SmartSpend</span>
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/risk-profile" className="nav-link">Risk Profile</Link>
-            <Link to="/budget-planner" className="nav-link">Budget Planner</Link>
-            <Link to="/final-analyze" className="nav-link">Final Analyze</Link>
           </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
-                {getInitials(namaUser)}
-              </span>
+              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>{getInitials(namaUser)}</span>
             </div>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{namaUser}</span>
+            <span style={{ color: 'white', fontSize: '14px' }}>{namaUser}</span>
           </div>
         </nav>
 
+        {/* CONTAINER */}
         <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px', display: 'flex', gap: '24px' }}>
-
-          {/* SIDEBAR KIRI */}
+          {/* SIDEBAR */}
           <div style={{ width: '260px', flexShrink: 0 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '28px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-
-              {/* Avatar */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <div style={{ position: 'relative', display: 'inline-block', marginBottom: '12px' }}>
-                  <div style={{ width: '80px', height: '80px', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-                    <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>
-                      {getInitials(form.nama)}
-                    </span>
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '24px', height: '24px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '12px' }}>
-                    📷
-                  </div>
+                <div style={{ width: '80px', height: '80px', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
                 </div>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', color: MAROON, marginBottom: '4px' }}>{form.nama}</h3>
-                <p style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '8px' }}>{form.email}</p>
-                <span style={{ display: 'inline-block', backgroundColor: '#FFF3E0', color: GOLD, fontSize: '11px', fontWeight: '600', padding: '4px 12px', borderRadius: '20px', border: `1px solid ${GOLD}` }}>
-                  Member Sejak Jan 2025
-                </span>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: MAROON }}>{form.nama}</h3>
+                <p style={{ fontSize: '12px', color: '#9CA3AF' }}>{form.email}</p>
               </div>
 
-              {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '16px 0' }} />
-
-              {/* Menu */}
-              {menus.map(m => (
-                <div key={m.key} className="menu-item"
-                  onClick={() => { setActiveMenu(m.key); setSaved(false); }}
-                  style={{ backgroundColor: activeMenu === m.key ? MAROON : 'transparent', color: activeMenu === m.key ? 'white' : '#374151', fontWeight: activeMenu === m.key ? '600' : '400' }}>
-                  <span style={{ fontSize: '16px' }}>{m.icon}</span>
-                  {m.label}
-                </div>
-              ))}
-
-              {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '8px 0' }} />
-
-              {/* Keluar */}
-              <div className="menu-item"
-                onClick={() => setShowLogout(true)}
-                style={{ color: RED, fontWeight: '500' }}>
-                <span style={{ fontSize: '16px' }}>🚪</span>
-                Keluar
-              </div>
+              <div className="menu-item" onClick={() => setActiveMenu('profil')} style={{ backgroundColor: activeMenu === 'profil' ? MAROON : 'transparent', color: activeMenu === 'profil' ? 'white' : '#374151' }}>👤 Informasi Pribadi</div>
+              <div className="menu-item" onClick={() => setActiveMenu('keamanan')} style={{ backgroundColor: activeMenu === 'keamanan' ? MAROON : 'transparent', color: activeMenu === 'keamanan' ? 'white' : '#374151' }}>🔒 Keamanan</div>
+              <div className="menu-item" onClick={() => setShowLogout(true)} style={{ color: RED, marginTop: '10px' }}>🚪 Keluar</div>
             </div>
           </div>
 
-          {/* KONTEN KANAN */}
+          {/* MAIN CONTENT */}
           <div style={{ flex: 1 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '36px 40px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              {saved && <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '12px', borderRadius: '10px', color: GREEN, marginBottom: '20px' }}>✅ {savedMessage}</div>}
 
-              {/* Notifikasi Berhasil Disimpan */}
-              {saved && (
-                <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: GREEN, fontSize: '13px', fontWeight: '500' }}>
-                  ✅ {savedMessage}
-                </div>
-              )}
-
-              {/* KONTEN KONDISIONAL BERDASARKAN MENU YANG AKTIF */}
-              {activeMenu === 'profil' && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-                    <div style={{ width: '10px', height: '10px', backgroundColor: GOLD, borderRadius: '50%' }} />
-                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: MAROON }}>Informasi Pribadi</h2>
+              {activeMenu === 'profil' ? (
+                <form onSubmit={handleSaveProfil}>
+                  <h2 style={{ color: MAROON, marginBottom: '20px' }}>Informasi Pribadi</h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>NAMA LENGKAP</label><input name="nama" value={form.nama} onChange={handleChange} style={inputStyle} /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>USERNAME</label><input name="username" value={form.username} onChange={handleChange} style={inputStyle} /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>TANGGAL LAHIR</label><input name="tanggalLahir" placeholder="YYYY-MM-DD" value={form.tanggalLahir} onChange={handleChange} style={inputStyle} /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>KOTA DOMISILI</label><input name="kota" value={form.kota} onChange={handleChange} style={inputStyle} /></div>
                   </div>
-
-                  <form onSubmit={handleSaveProfil}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                      <div>
-                        <label style={labelStyle}>NAMA LENGKAP</label>
-                        <input name="nama" value={form.nama || ''} onChange={handleChange} style={inputStyle} />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>USERNAME</label>
-                        <input name="username" value={form.username || ''} onChange={handleChange} style={inputStyle} />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>TANGGAL LAHIR</label>
-                        <input name="tanggalLahir" value={form.tanggalLahir || ''} onChange={handleChange} style={inputStyle} />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>KOTA DOMISILI</label>
-                        <input name="kota" value={form.kota || ''} onChange={handleChange} style={inputStyle} />
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: '28px' }}>
-                      <label style={labelStyle}>JENIS KELAMIN</label>
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        {['Laki-laki', 'Perempuan'].map(g => (
-                          <button key={g} type="button"
-                            onClick={() => setForm({ ...form, jenisKelamin: g })}
-                            style={{
-                              padding: '10px 24px', border: 'none', borderRadius: '10px',
-                              fontSize: '14px', cursor: 'pointer', fontFamily: 'Poppins,sans-serif',
-                              fontWeight: form.jenisKelamin === g ? '600' : '400',
-                              backgroundColor: form.jenisKelamin === g ? MAROON : '#F3F4F6',
-                              color: form.jenisKelamin === g ? 'white' : '#6B7280',
-                              transition: 'all 0.2s',
-                            }}>
-                            {g}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                      <button type="button" onClick={() => navigate('/dashboard')} style={{ padding: '12px 28px', backgroundColor: 'white', border: `1.5px solid ${MAROON}`, color: MAROON, borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Batal</button>
-                      <button type="submit" style={{ padding: '12px 28px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 12px rgba(107,15,26,0.3)' }}>✓ Simpan Perubahan</button>
-                    </div>
-                  </form>
-                </>
-              )}
-
-              {activeMenu === 'keamanan' && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #F3F4F6' }}>
-                    <div style={{ width: '10px', height: '10px', backgroundColor: GOLD, borderRadius: '50%' }} />
-                    <h2 style={{ fontSize: '20px', fontWeight: '700', color: MAROON }}>Pengaturan Keamanan</h2>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '6px' }}>JENIS KELAMIN</label>
+                    {['Laki-laki', 'Perempuan'].map(g => (
+                      <button key={g} type="button" onClick={() => setForm({ ...form, jenisKelamin: g })} style={{ padding: '10px 20px', marginRight: '10px', border: 'none', borderRadius: '10px', backgroundColor: form.jenisKelamin === g ? MAROON : '#F3F4F6', color: form.jenisKelamin === g ? 'white' : '#6B7280', cursor: 'pointer' }}>{g}</button>
+                    ))}
                   </div>
-
-                  <form onSubmit={handleSaveKeamanan}>
-                    {/* Seksi Email & No HP */}
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: MAROON, marginBottom: '12px' }}>Kontak Keamanan</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                      <div>
-                        <label style={labelStyle}>ALAMAT EMAIL</label>
-                        <input name="emailBaru" type="email" value={securityForm.emailBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
-                      </div>
-                      <div>
-                        <label style={labelStyle}>NOMOR HP</label>
-                        <input name="noHpBaru" type="text" value={securityForm.noHpBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
-                      </div>
-                    </div>
-
-                    {/* Seksi Ganti Password */}
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: MAROON, marginBottom: '12px' }}>Ganti Password</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
-                      <div>
-                        <label style={labelStyle}>PASSWORD LAMA</label>
-                        <input name="passwordLama" type="password" placeholder="••••••••" value={securityForm.passwordLama || ''} onChange={handleSecurityChange} style={inputStyle} />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                        <div>
-                          <label style={labelStyle}>PASSWORD BARU</label>
-                          <input name="passwordBaru" type="password" placeholder="••••••••" value={securityForm.passwordBaru || ''} onChange={handleSecurityChange} style={inputStyle} />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>KONFIRMASI PASSWORD BARU</label>
-                          <input name="konfirmasiPassword" type="password" placeholder="••••••••" value={securityForm.konfirmasiPassword || ''} onChange={handleSecurityChange} style={inputStyle} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                      <button type="button" onClick={() => setActiveMenu('profil')} style={{ padding: '12px 28px', backgroundColor: 'white', border: `1.5px solid ${MAROON}`, color: MAROON, borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Batal</button>
-                      <button type="submit" style={{ padding: '12px 28px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 12px rgba(107,15,26,0.3)' }}>✓ Perbarui Keamanan</button>
-                    </div>
-                  </form>
-                </>
+                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Simpan Perubahan</button>
+                </form>
+              ) : (
+                <form onSubmit={handleSaveKeamanan}>
+                  <h2 style={{ color: MAROON, marginBottom: '20px' }}>Pengaturan Keamanan</h2>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>ALAMAT EMAIL</label><input name="emailBaru" value={securityForm.emailBaru} onChange={handleSecurityChange} style={inputStyle} /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>NOMOR HP</label><input name="noHpBaru" value={securityForm.noHpBaru} onChange={handleSecurityChange} style={inputStyle} /></div>
+                  </div>
+                  <div style={{ marginBottom: '16px' }}><label style={{ fontSize: '12px', color: '#6B7280' }}>PASSWORD LAMA</label><input name="passwordLama" type="password" value={securityForm.passwordLama} onChange={handleSecurityChange} style={inputStyle} placeholder="••••••••" /></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>PASSWORD BARU</label><input name="passwordBaru" type="password" value={securityForm.passwordBaru} onChange={handleSecurityChange} style={inputStyle} placeholder="••••••••" /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>KONFIRMASI PASSWORD</label><input name="konfirmasiPassword" type="password" value={securityForm.konfirmasiPassword} onChange={handleSecurityChange} style={inputStyle} placeholder="••••••••" /></div>
+                  </div>
+                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Perbarui Keamanan</button>
+                </form>
               )}
-
             </div>
           </div>
         </div>
@@ -382,13 +264,11 @@ export default function UserProfile() {
       {/* LOGOUT MODAL */}
       {showLogout && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ width: '72px', height: '72px', backgroundColor: '#FEE8E8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '32px' }}>🚪</div>
-            <h2 style={{ color: MAROON, fontSize: '22px', fontWeight: '700', marginBottom: '10px' }}>Yakin ingin keluar?</h2>
-            <p style={{ color: '#6B7280', fontSize: '14px', lineHeight: '1.6', marginBottom: '28px' }}>Kamu akan keluar dari sesi SmartSpend.</p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', backgroundColor: 'white', border: `1.5px solid ${MAROON}`, color: MAROON, borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>← Batal</button>
-              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Ya, Keluar 🚪</button>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center' }}>
+            <h3>Yakin ingin keluar?</h3>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: `1.5px solid ${MAROON}`, cursor: 'pointer' }}>Batal</button>
+              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Keluar</button>
             </div>
           </div>
         </div>
