@@ -112,13 +112,63 @@ export default function Dashboard() {
     setShowNotifBell(false)
   }
 
-  // Loading Screen Transisi
+  // ===== KODE BARU LOADING SCREEN PREMIUM (HANYA BAGIAN INI YANG DIUBAH) =====
   if (loading) {
     return (
-      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', backgroundColor:CREAM, flexDirection:'column', gap:'12px' }}>
-        <div style={{ border:'4px solid #f3f3f3', borderTop:`4px solid ${MAROON}`, borderRadius:'50%', width:'40px', height:'40px', animation:'spin 1s linear infinite' }} />
-        <p style={{ color:MAROON, fontWeight:500, fontSize:'14px' }}>Sinkronisasi data Final Analyze...</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div style={{ 
+        minHeight: '100vh', 
+        backgroundColor: CREAM, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        gap: '20px' 
+      }}>
+        <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+          <div style={{ 
+            width: '100%', 
+            height: '100%', 
+            border: '4px solid rgba(107, 15, 26, 0.1)', 
+            borderTop: `4px solid ${MAROON}`, 
+            borderRadius: '50%', 
+            animation: 'spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite' 
+          }} />
+          <div style={{ 
+            position: 'absolute', 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)',
+            fontSize: '24px'
+          }}>
+            🛡️
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ 
+            color: MAROON, 
+            fontWeight: '700', 
+            fontSize: '16px', 
+            margin: '0 0 4px 0',
+            letterSpacing: '0.5px'
+          }}>
+            Sinkronisasi Data Final Analyze
+          </p>
+          <p style={{ 
+            color: GOLD, 
+            fontSize: '13px', 
+            fontWeight: '500',
+            margin: 0,
+            animation: 'pulse 1.5s ease-in-out infinite'
+          }}>
+            Memuat dashboard keuangan Anda...
+          </p>
+        </div>
+
+        <style>{`
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        `}</style>
       </div>
     )
   }
