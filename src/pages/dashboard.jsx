@@ -28,6 +28,9 @@ export default function Dashboard() {
   )
   const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
   
+  // STATE BARU UNTUK MENAMPUNG PROFILE PICTURE / AVATAR
+  const [avatarUser, setAvatarUser] = useState(localStorage.getItem('user_avatar') || null)
+  
   const [totalPemasukan, setTotalPemasukan] = useState(0)
   const [profilRisiko, setProfilRisiko] = useState('Konservatif')
   const [ringkasanPengeluaran, setRingkasanPengeluaran] = useState([
@@ -52,7 +55,7 @@ export default function Dashboard() {
           setNamaUser(localName)
         }
 
-        // 1. Ambil data profil user yang sedang login (Nama & Email)
+        // 1. Ambil data profil user yang sedang login (Nama, Email, & Avatar)
         const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
           headers: { Authorization: `Bearer ${token}` }
         })
@@ -60,13 +63,20 @@ export default function Dashboard() {
           // JIKA user sudah isi nama di Risk Profile, gunakan nama itu. Jika belum, gunakan dari database login.
           const fetchedName = localStorage.getItem('namaUser') || userRes.data.name || 'User'
           const fetchedEmail = userRes.data.email || 'user@email.com'
+          const fetchedAvatar = userRes.data.avatar || null // Mengambil kolom avatar baru database
           
           setNamaUser(fetchedName)
           setEmailUser(fetchedEmail)
+          setAvatarUser(fetchedAvatar)
           
           // Perbarui penyimpanan lokal agar halaman lain tersinkronisasi sempurna
           localStorage.setItem('user_name', userRes.data.name || 'User')
           localStorage.setItem('user_email', fetchedEmail)
+          if (fetchedAvatar) {
+            localStorage.setItem('user_avatar', fetchedAvatar)
+          } else {
+            localStorage.removeItem('user_avatar')
+          }
         }
 
         // 2. Ambil data profil risiko terbaru untuk label badge
@@ -110,10 +120,6 @@ export default function Dashboard() {
   const handleAktifkan = async () => {
     try {
       const token = localStorage.getItem('token')
-      // Optional backend sync (uncomment jika backend sudah siap endpoint toggle-alert nya):
-      // await axios.post('http://127.0.0.1:8000/api/dashboard/toggle-alert', { status: true }, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // })
       localStorage.setItem('notifikasi_aktif', 'true')
       setNotifAktif(true)
     } catch (err) {
@@ -127,10 +133,6 @@ export default function Dashboard() {
   const handleNonaktifkan = async () => {
     try {
       const token = localStorage.getItem('token')
-      // Optional backend sync (uncomment jika backend sudah siap endpoint toggle-alert nya):
-      // await axios.post('http://127.0.0.1:8000/api/dashboard/toggle-alert', { status: false }, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // })
       localStorage.setItem('notifikasi_aktif', 'false')
       setNotifAktif(false)
     } catch (err) {
@@ -145,7 +147,7 @@ export default function Dashboard() {
     setNotifAktif(false)
   }
 
-  // ===== KODE BARU LOADING SCREEN PREMIUM =====
+  // ===== KODE LOADING SCREEN PREMIUM =====
   if (loading) {
     return (
       <div style={{ 
@@ -257,7 +259,6 @@ export default function Dashboard() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                   <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                 </svg>
-                {/* 🔴 Angka merah lingkaran atas hanya muncul jika notifAktif bernilai true */}
                 {notifAktif && (
                   <span style={{
                     position:'absolute', top:'-2px', right:'-2px',
@@ -295,7 +296,6 @@ export default function Dashboard() {
                   <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                     {notifAktif ? (
                       <>
-                        {/* JIKA DIAKTIFKAN: Tampilkan isi notifikasi */}
                         <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', gap:'12px', alignItems:'flex-start', backgroundColor:'#FFF8F0', cursor:'pointer', transition:'background 0.2s' }} onClick={() => { setShowNotif(false); navigate('/final-analyze') }}>
                           <div style={{ width:'42px', height:'42px', backgroundColor:'#FEF3C7', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>⚠️</div>
                           <div style={{ flex:1 }}>
@@ -318,7 +318,6 @@ export default function Dashboard() {
                         </div>
                       </>
                     ) : (
-                      /* JIKA BELUM DIAKTIFKAN: Tampilkan kondisi kosong rapi */
                       <div style={{ textAlign:'center', padding:'32px 20px', color:'#9CA3AF', fontSize:'13px', lineHeight:'1.6' }}>
                         🔕 Notifikasi belum aktif.<br />
                         Silakan klik tombol "✓ Aktifkan" di panel Spending Alert bawah.
@@ -335,13 +334,31 @@ export default function Dashboard() {
 
             <div style={{ width:'1px', height:'24px', backgroundColor:'rgba(255,255,255,0.3)' }}/>
 
-            {/* Avatar Profile */}
+            {/* ===== FIXED AVATAR PROFILE DENGAN LOGIKA FOTO PROFILE ===== */}
             <div style={{ position:'relative' }}>
               <div onClick={() => setShowDropdown(!showDropdown)} style={{ display:'flex', alignItems:'center', gap:'10px', cursor:'pointer' }}>
-                <div style={{ width:'36px', height:'36px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>
-                    {namaUser.substring(0, 2).toUpperCase()}
-                  </span>
+                <div style={{ 
+                  width:'36px', 
+                  height:'36px', 
+                  backgroundColor:GOLD, 
+                  borderRadius:'50%', 
+                  display:'flex', 
+                  alignItems:'center', 
+                  justifyContent:'center',
+                  overflow:'hidden' // Menghindari gambar luber keluar lingkaran bulat
+                }}>
+                  {avatarUser ? (
+                    <img 
+                      src={avatarUser} 
+                      alt="Profile" 
+                      style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                      onError={() => setAvatarUser(null)} // Fallback ke inisial huruf jika gambar corrupt
+                    />
+                  ) : (
+                    <span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>
+                      {namaUser.substring(0, 2).toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <span style={{ color:'white', fontSize:'14px', fontWeight:'500' }}>{namaUser}</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -472,7 +489,6 @@ export default function Dashboard() {
             )}
 
             {!notifAktif ? (
-              /* JIKA NOTIFIKASI BELUM AKTIF: Tampilkan penawaran aktifkan */
               <div style={{ border:`1.5px solid ${GOLD}`, borderRadius:'12px', padding:'20px' }}>
                 <div style={{ display:'flex', alignItems:'flex-start', gap:'14px' }}>
                   <div style={{ width:'48px', height:'48px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent: 'center', flexShrink:0, fontSize:'22px' }}>🔔</div>
@@ -487,7 +503,6 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              /* JIKA NOTIFIKASI SUDAH AKTIF: Menampilkan badge sukses + Tombol untuk Menonaktifkan Kembali */
               <div style={{ 
                 border:`1.5px solid ${GREEN}`, 
                 backgroundColor:'#F0FDF4', 
@@ -506,7 +521,6 @@ export default function Dashboard() {
                   </div>
                 </div>
                 
-                {/* Tombol Baru untuk mematikan / menonaktifkan fitur */}
                 <button 
                   onClick={handleNonaktifkan} 
                   style={{
@@ -567,8 +581,8 @@ export default function Dashboard() {
             <h2 style={{ color:MAROON, fontSize:'22px', fontWeight:'700', marginBottom:'10px' }}>Yakin ingin keluar?</h2>
             <p style={{ color:'#6B7280', fontSize:'14px', lineHeight:'1.6', marginBottom:'24px' }}>Kamu akan keluar dari sesi SmartSpend. Pastikan semua data sudah tersimpan.</p>
             <div style={{ display:'flex', gap:'12px' }}>
-              <button onClick={() => setShowLogoutModal(false)} style={{ flex:1, height:'48px', backgroundColor:'white', border:`1.5px solid ${MAROON}`, color:MAROON, borderRadius:'10px', fontSize:'14px', fontWeight:'600', cursor:'pointer' }}>← Batal</button>
-              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex:1, height:'48px', backgroundColor:MAROON, color:'white', border:'none', borderRadius:'10px', fontSize:'14px', fontWeight:'600', cursor:'pointer' }}>Ya, Keluar 🚪</button>
+              <button onClick={() => setShowLogoutModal(false)} style={{ flex:1, padding:'12px', backgroundColor:'#F3F4F6', color:'#4B5563', border:'none', borderRadius:'10px', fontWeight:'600', cursor:'pointer' }}>Batal</button>
+              <button onClick={() => { localStorage.clear(); navigate('/login') }} style={{ flex:1, padding:'12px', backgroundColor:RED, color:'white', border:'none', borderRadius:'10px', fontWeight:'600', cursor:'pointer' }}>Keluar</button>
             </div>
           </div>
         </div>

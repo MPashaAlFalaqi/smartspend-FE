@@ -24,6 +24,11 @@ export default function FinalAnalyze() {
     kategori: 'konservatif'
   })
 
+  // ===== STATE UNTUK FOTO PROFILE =====
+  const [fotoUser, setFotoUser] = useState(
+    localStorage.getItem('fotoUser') || localStorage.getItem('user_avatar') || null
+  )
+
   // Mengambil inisial nama untuk lingkaran avatar di Navbar
   const getInisial = (nama) => {
     if (!nama) return 'U'
@@ -59,6 +64,9 @@ export default function FinalAnalyze() {
       pesanAnalisis: msg,
       kategori: finalKategori
     })
+
+    // SINKRONKAN KEMBALI FOTO USER JIKA ADA PERUBAHAN
+    setFotoUser(localStorage.getItem('fotoUser') || localStorage.getItem('user_avatar') || null)
   }, [])
 
   // ===== FUNGSI SIMPAN KE LARAVEL =====
@@ -209,10 +217,29 @@ export default function FinalAnalyze() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
-                {getInisial(analisis.namaUser)}
-              </span>
+            {/* LINGKARAN AVATAR USER */}
+            <div style={{ 
+              width: '36px', 
+              height: '36px', 
+              backgroundColor: GOLD, 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              overflow: 'hidden' // Agar gambar profil bulat sempurna
+            }}>
+              {fotoUser ? (
+                <img 
+                  src={fotoUser} 
+                  alt="Profile" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={() => setFotoUser(null)} // Fallback ke inisial jika url eror/broken
+                />
+              ) : (
+                <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
+                  {getInisial(analisis.namaUser)}
+                </span>
+              )}
             </div>
             <span style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>{analisis.namaUser}</span>
           </div>

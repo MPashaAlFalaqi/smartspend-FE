@@ -10,7 +10,7 @@ const RED = '#C0392B'
 
 export default function UserProfile() {
   const navigate = useNavigate()
-  const fileInputRef = useRef(null) // Ref untuk menembak input file yang tersembunyi
+  const fileInputRef = useRef(null) 
   const [activeMenu, setActiveMenu] = useState('profil')
   const [showLogout, setShowLogout] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -18,7 +18,7 @@ export default function UserProfile() {
 
   const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
   const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
-  const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '') // State untuk menampung gambar profil
+  const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '') 
 
   const [form, setForm] = useState({
     nama: localStorage.getItem('user_name') || 'User',
@@ -45,18 +45,17 @@ export default function UserProfile() {
     return cleanName.split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()
   }
 
-  // Fungsi mengubah file gambar menjadi string Base64
   const handleAvatarChange = (e) => {
     const file = e.target.files[0]
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // Batasi ukuran file max 2MB agar database tidak bengkak
+      if (file.size > 2 * 1024 * 1024) { 
         alert('Ukuran file terlalu besar! Maksimal 2MB.')
         return
       }
       
       const reader = new FileReader()
       reader.onloadend = () => {
-        setAvatar(reader.result) // reader.result berisi string base64 gambar
+        setAvatar(reader.result) 
         setSaved(false)
       }
       reader.readAsDataURL(file)
@@ -82,7 +81,7 @@ export default function UserProfile() {
           const fetchedTglLahir = userData.tanggal_lahir || ''
           const fetchedGender = userData.jenis_kelamin || 'Laki-laki'
           const fetchedKota = userData.kota || ''
-          const fetchedAvatar = userData.avatar || '' // Ambil field avatar dari backend jika ada
+          const fetchedAvatar = userData.avatar || '' 
 
           setNamaUser(fetchedName)
           setEmailUser(fetchedEmail)
@@ -132,15 +131,22 @@ export default function UserProfile() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      // Menyertakan data avatar (string base64) ke dalam payload JSON biasa
-      await axios.put('http://127.0.0.1:8000/api/user/update', {
-        name: form.nama,
+      if (!form.nama) {
+        alert('Nama Lengkap wajib diisi!')
+        return
+      }
+
+      // FIXED: Memetakan variabel secara eksplisit ke snake_case agar lolos validasi Laravel
+      const payload = {
+        nama: form.nama,
         username: form.username,
         tanggal_lahir: form.tanggalLahir,
         kota: form.kota,
         jenis_kelamin: form.jenisKelamin,
-        avatar: avatar // Kirim data string foto profil ke backend
-      }, {
+        avatar: avatar 
+      }
+
+      await axios.put('http://127.0.0.1:8000/api/user/update', payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
       
@@ -152,7 +158,12 @@ export default function UserProfile() {
       triggerNotif('Perubahan informasi pribadi berhasil disimpan ke server!')
     } catch (error) {
       console.error(error)
-      alert('Gagal menyimpan perubahan ke database.')
+      // SAKLAR PINTU DARURAT: Menampilkan pesan error spesifik jika Laravel menolak data
+      if (error.response && error.response.data) {
+        alert(`Gagal menyimpan: ${JSON.stringify(error.response.data.message || error.response.data.errors)}`)
+      } else {
+        alert('Gagal menyimpan perubahan ke database.')
+      }
     }
   }
 
@@ -207,7 +218,7 @@ export default function UserProfile() {
         .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; font-size:14px; }
         input:focus { border-color:${MAROON} !important; outline:none; background:#fff !important; }
         .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 12px; cursor: pointer; }
-        .avatar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; alignItems: center; justify-content: center; color: white; font-size: 11px; opacity: 0; transition: opacity 0.2s ease; }
+        .avatar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; opacity: 0; transition: opacity 0.2s ease; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
       `}</style>
 
@@ -239,7 +250,7 @@ export default function UserProfile() {
           <div style={{ width: '260px', flexShrink: 0 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '28px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               
-              {/* SECTION FOTO PROFIL (Bisa diklik untuk ganti foto) */}
+              {/* SECTION FOTO PROFIL */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <input 
                   type="file" 
@@ -256,7 +267,7 @@ export default function UserProfile() {
                       <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
                     </div>
                   )}
-                  <div className="avatar-overlay" style={{ borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ganti Foto</div>
+                  <div className="avatar-overlay" style={{ borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center' }}>Ganti Foto</div>
                 </div>
 
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: MAROON }}>{form.nama}</h3>
