@@ -15,11 +15,20 @@ export default function RiskProfile() {
     localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User'
   )
 
+  // Mengeluarkan properti 'status' dari inisialisasi state form
   const [form, setForm] = useState({
-    nama: '', usia: '', pekerjaan: '', status: '', penghasilan: ''
+    nama: '', usia: '', pekerjaan: '', penghasilan: ''
   })
   const [error, setError] = useState('')
   const [sukses, setSukses] = useState(false)
+
+  // Otomatis isi field nama saat komponen di-load berdasarkan data registrasi/login
+  useEffect(() => {
+    setForm(prevForm => ({
+      ...prevForm,
+      nama: namaUser
+    }))
+  }, [namaUser])
 
   // Mengambil inisial nama (maksimal 2 huruf) untuk lingkaran avatar di Navbar
   const getInisial = (nama) => {
@@ -59,17 +68,14 @@ export default function RiskProfile() {
     setError('')
   }
 
-  const handleStatus = (val) => {
-    setForm({ ...form, status: val })
-    setError('')
-  }
-
   // ==========================================
-  // FIXED: PROSES SUBMIT SINKRON DENGAN BACKEND & LOCALSTORAGE
+  // PROSES SUBMIT SINKRON DENGAN BACKEND & LOCALSTORAGE (STATUS REMOVED)
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.nama || !form.usia || !form.pekerjaan || !form.status || !form.penghasilan) {
+    
+    // Menghilangkan pengecekan form.status dari validasi required
+    if (!form.nama || !form.usia || !form.pekerjaan || !form.penghasilan) {
       setError('Harap lengkapi semua data sebelum melanjutkan.')
       return
     }
@@ -82,12 +88,6 @@ export default function RiskProfile() {
     try {
       const token = localStorage.getItem('token')
 
-      // Antisipasi penulisan ENUM status untuk MySQL (diubah jadi huruf kecil & Pensiunan -> pensiun)
-      let statusFormatDatabase = form.status.toLowerCase();
-      if (statusFormatDatabase === 'pensiunan') {
-        statusFormatDatabase = 'pensiun';
-      }
-
       const response = await fetch('http://127.0.0.1:8000/api/risk-profile', {
         method: 'POST',
         headers: {
@@ -98,7 +98,6 @@ export default function RiskProfile() {
         body: JSON.stringify({
           usia:        parseInt(form.usia),          // Diubah ke Integer murni
           pekerjaan:   form.pekerjaan,
-          status:      statusFormatDatabase,         // Huruf kecil sesuai ENUM database
           penghasilan: parseFloat(form.penghasilan), // Diubah ke Float/Numeric murni
         })
       })
@@ -148,36 +147,17 @@ export default function RiskProfile() {
           color: #1F2937;
           transition: all 0.3s ease;
         }
-        .custom-input:focus {
+        .custom-input:focus:not(:read-only) {
           border-color: ${MAROON} !important;
           background: #FFFFFF;
           box-shadow: 0 0 0 4px rgba(107, 15, 26, 0.08);
           outline: none;
         }
-
-        .status-pill {
-          padding: 12px 24px;
-          border: 1.5px solid #E5E7EB;
-          border-radius: 12px;
-          background: #FFFFFF;
-          color: #4B5563;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .status-pill:hover {
-          border-color: ${MAROON};
-          color: ${MAROON};
-          background: rgba(107, 15, 26, 0.02);
-          transform: translateY(-1px);
-        }
-        .status-pill.active {
-          border-color: ${MAROON};
-          background: ${MAROON};
-          color: #FFFFFF;
-          font-weight: 600;
-          box-shadow: 0 4px 12px rgba(107, 15, 26, 0.2);
+        .custom-input:read-only {
+          background: #F3F4F6;
+          color: #6B7280;
+          border-color: #E5E7EB;
+          cursor: not-allowed;
         }
 
         .btn-submit {
@@ -288,8 +268,9 @@ export default function RiskProfile() {
                 <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px', color:'#4B5563', letterSpacing:'0.5px' }}>NAMA LENGKAP</label>
                 <input
                   type="text" name="nama"
-                  placeholder="Masukkan nama lengkap Anda"
-                  value={form.nama} onChange={handleChange}
+                  placeholder="Nama terisi otomatis"
+                  value={form.nama} 
+                  readOnly
                   className="custom-input"
                 />
               </div>
@@ -323,20 +304,7 @@ export default function RiskProfile() {
                 </div>
               </div>
 
-              <div style={{ marginBottom:'24px' }}>
-                <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'10px', color:'#4B5563', letterSpacing:'0.5px' }}>STATUS SAAT INI</label>
-                <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
-                  {['Mahasiswa', 'Pekerja', 'Wiraswasta', 'Pensiunan'].map(s => (
-                    <button
-                      key={s} type="button"
-                      onClick={() => handleStatus(s)}
-                      className={`status-pill ${form.status === s ? 'active' : ''}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Blok UI "STATUS SAAT INI" Telah Dihapus dari Sini */}
 
               <div style={{ marginBottom:'36px' }}>
                 <label style={{ fontSize:'12px', fontWeight:'700', display:'block', marginBottom:'8px', color:'#4B5563', letterSpacing:'0.5px' }}>PENGHASILAN BULANAN</label>

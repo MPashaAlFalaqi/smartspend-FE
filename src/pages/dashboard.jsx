@@ -12,8 +12,11 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [showDropdown, setShowDropdown] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const [notifAktif, setNotifAktif] = useState(false)
-  const [showNotifBell, setShowNotifBell] = useState(true)
+  
+  // Mengambil status awal notifikasi dari localStorage agar presisi
+  const [notifAktif, setNotifAktif] = useState(
+    localStorage.getItem('notifikasi_aktif') === 'true'
+  )
   const [showNotif, setShowNotif] = useState(false)
 
   // ===== STATE UNTUK DATA DINAMIS DATABASE =====
@@ -103,16 +106,46 @@ export default function Dashboard() {
   const totalTabungan = ringkasanPengeluaran.find(item => item.kategori === 'Tabungan')?.total || 0
   const sisaAnggaran = totalPemasukan - totalPengeluaran - totalTabungan
 
-  const handleAktifkan = () => {
-    setNotifAktif(true)
-    setShowNotifBell(false)
+  // Fungsi untuk mengaktifkan notifikasi
+  const handleAktifkan = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      // Optional backend sync (uncomment jika backend sudah siap endpoint toggle-alert nya):
+      // await axios.post('http://127.0.0.1:8000/api/dashboard/toggle-alert', { status: true }, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // })
+      localStorage.setItem('notifikasi_aktif', 'true')
+      setNotifAktif(true)
+    } catch (err) {
+      console.error(err)
+      localStorage.setItem('notifikasi_aktif', 'true')
+      setNotifAktif(true)
+    }
+  }
+
+  // Fungsi untuk menonaktifkan kembali notifikasi
+  const handleNonaktifkan = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      // Optional backend sync (uncomment jika backend sudah siap endpoint toggle-alert nya):
+      // await axios.post('http://127.0.0.1:8000/api/dashboard/toggle-alert', { status: false }, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // })
+      localStorage.setItem('notifikasi_aktif', 'false')
+      setNotifAktif(false)
+    } catch (err) {
+      console.error(err)
+      localStorage.setItem('notifikasi_aktif', 'false')
+      setNotifAktif(false)
+    }
   }
 
   const handleTidak = () => {
-    setShowNotifBell(false)
+    localStorage.setItem('notifikasi_aktif', 'false')
+    setNotifAktif(false)
   }
 
-  // ===== KODE BARU LOADING SCREEN PREMIUM (HANYA BAGIAN INI YANG DIUBAH) =====
+  // ===== KODE BARU LOADING SCREEN PREMIUM =====
   if (loading) {
     return (
       <div style={{ 
@@ -224,7 +257,8 @@ export default function Dashboard() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                   <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                 </svg>
-                {showNotifBell && (
+                {/* 🔴 Angka merah lingkaran atas hanya muncul jika notifAktif bernilai true */}
+                {notifAktif && (
                   <span style={{
                     position:'absolute', top:'-2px', right:'-2px',
                     backgroundColor:RED, borderRadius:'50%',
@@ -247,37 +281,52 @@ export default function Dashboard() {
                   <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
                       <h3 style={{ fontSize:'15px', fontWeight:'700', color:'#1A1A1A' }}>Notifikasi</h3>
-                      {showNotifBell && (
+                      {notifAktif && (
                         <span style={{ backgroundColor:RED, color:'white', fontSize:'11px', fontWeight:'700', padding:'2px 8px', borderRadius:'20px' }}>1 baru</span>
                       )}
                     </div>
-                    <span onClick={() => { setShowNotifBell(false) }} style={{ fontSize:'12px', color:GOLD, fontWeight:'600', cursor:'pointer' }}>
-                      Tandai dibaca
-                    </span>
+                    {notifAktif && (
+                      <span onClick={() => { localStorage.setItem('notifikasi_aktif', 'false'); setNotifAktif(false); }} style={{ fontSize:'12px', color:GOLD, fontWeight:'600', cursor:'pointer' }}>
+                        Tandai dibaca
+                      </span>
+                    )}
                   </div>
 
-                  <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', gap:'12px', alignItems:'flex-start', backgroundColor: showNotifBell ? '#FFF8F0' : 'white', cursor:'pointer', transition:'background 0.2s' }} onClick={() => { setShowNotif(false); navigate('/final-analyze') }}>
-                    <div style={{ width:'42px', height:'42px', backgroundColor:'#FEF3C7', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>⚠️</div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
-                        <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A' }}>Spending Alert!</p>
-                        {showNotifBell && <div style={{ width:'8px', height:'8px', backgroundColor:RED, borderRadius:'50%', marginTop:'4px' }}/>}
+                  <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                    {notifAktif ? (
+                      <>
+                        {/* JIKA DIAKTIFKAN: Tampilkan isi notifikasi */}
+                        <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', gap:'12px', alignItems:'flex-start', backgroundColor:'#FFF8F0', cursor:'pointer', transition:'background 0.2s' }} onClick={() => { setShowNotif(false); navigate('/final-analyze') }}>
+                          <div style={{ width:'42px', height:'42px', backgroundColor:'#FEF3C7', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>⚠️</div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'4px' }}>
+                              <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A' }}>Spending Alert!</p>
+                              <div style={{ width:'8px', height:'8px', backgroundColor:RED, borderRadius:'50%', marginTop:'4px' }}/>
+                            </div>
+                            <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>Pengeluaranmu telah mencapai 95% dari total anggaran bulan ini.</p>
+                            <span style={{ fontSize:'11px', color:GOLD, fontWeight:'500' }}>2 menit lalu</span>
+                          </div>
+                        </div>
+
+                        <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', gap:'12px', alignItems:'flex-start', cursor:'pointer', transition:'background 0.2s' }} onClick={() => { setShowNotif(false); navigate('/budget-planner') }}>
+                          <div style={{ width:'42px', height:'42px', backgroundColor:'#F0FDF4', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>💰</div>
+                          <div style={{ flex:1 }}>
+                            <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A', marginBottom:'4px' }}>Budget Planner Tersimpan</p>
+                            <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>Budget planner bulan ini berhasil disimpan dan dianalisis.</p>
+                            <span style={{ fontSize:'11px', color:'#9CA3AF', fontWeight:'500' }}>1 jam lalu</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* JIKA BELUM DIAKTIFKAN: Tampilkan kondisi kosong rapi */
+                      <div style={{ textAlign:'center', padding:'32px 20px', color:'#9CA3AF', fontSize:'13px', lineHeight:'1.6' }}>
+                        🔕 Notifikasi belum aktif.<br />
+                        Silakan klik tombol "✓ Aktifkan" di panel Spending Alert bawah.
                       </div>
-                      <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>Pengeluaranmu telah mencapai 95% dari total anggaran bulan ini.</p>
-                      <span style={{ fontSize:'11px', color:GOLD, fontWeight:'500' }}>2 menit lalu</span>
-                    </div>
+                    )}
                   </div>
 
-                  <div style={{ padding:'16px 20px', borderBottom:'1px solid #F3F4F6', display:'flex', gap:'12px', alignItems:'flex-start', cursor:'pointer', transition:'background 0.2s' }} onClick={() => { setShowNotif(false); navigate('/budget-planner') }}>
-                    <div style={{ width:'42px', height:'42px', backgroundColor:'#F0FDF4', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>💰</div>
-                    <div style={{ flex:1 }}>
-                      <p style={{ fontSize:'13px', fontWeight:'700', color:'#1A1A1A', marginBottom:'4px' }}>Budget Planner Tersimpan</p>
-                      <p style={{ fontSize:'12px', color:'#6B7280', lineHeight:'1.5', marginBottom:'4px' }}>Budget planner bulan ini berhasil disimpan dan dianalisis.</p>
-                      <span style={{ fontSize:'11px', color:'#9CA3AF', fontWeight:'500' }}>1 jam lalu</span>
-                    </div>
-                  </div>
-
-                  <div onClick={() => setShowNotif(false)} style={{ padding:'14px 20px', textAlign:'center', cursor:'pointer', borderRadius:'0 0 16px 16px' }}>
+                  <div onClick={() => setShowNotif(false)} style={{ padding:'14px 20px', textAlign:'center', cursor:'pointer', borderRadius:'0 0 16px 16px', borderTop:'1px solid #F3F4F6' }}>
                     <span style={{ fontSize:'13px', color:MAROON, fontWeight:'600' }}>Tutup ✕</span>
                   </div>
                 </div>
@@ -423,6 +472,7 @@ export default function Dashboard() {
             )}
 
             {!notifAktif ? (
+              /* JIKA NOTIFIKASI BELUM AKTIF: Tampilkan penawaran aktifkan */
               <div style={{ border:`1.5px solid ${GOLD}`, borderRadius:'12px', padding:'20px' }}>
                 <div style={{ display:'flex', alignItems:'flex-start', gap:'14px' }}>
                   <div style={{ width:'48px', height:'48px', backgroundColor:GOLD, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent: 'center', flexShrink:0, fontSize:'22px' }}>🔔</div>
@@ -437,12 +487,44 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div style={{ border:`1.5px solid ${GREEN}`, backgroundColor:'#F0FDF4', borderRadius:'12px', padding:'20px', display:'flex', alignItems:'center', gap:'14px' }}>
-                <div style={{ width:'48px', height:'48px', backgroundColor:GREEN, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>✅</div>
-                <div>
-                  <p style={{ fontWeight:'600', fontSize:'15px', color:GREEN, marginBottom:'4px' }}>Notifikasi Overspending Aktif</p>
-                  <p style={{ fontSize:'13px', color:'#6B7280' }}>Sistem akan memantau pengeluaranmu secara otomatis.</p>
+              /* JIKA NOTIFIKASI SUDAH AKTIF: Menampilkan badge sukses + Tombol untuk Menonaktifkan Kembali */
+              <div style={{ 
+                border:`1.5px solid ${GREEN}`, 
+                backgroundColor:'#F0FDF4', 
+                borderRadius:'12px', 
+                padding:'20px', 
+                display:'flex', 
+                alignItems:'center', 
+                justifyContent:'space-between',
+                gap:'14px' 
+              }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+                  <div style={{ width:'48px', height:'48px', backgroundColor:GREEN, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>✅</div>
+                  <div>
+                    <p style={{ fontWeight:'600', fontSize:'15px', color:GREEN, marginBottom:'4px' }}>Notifikasi Overspending Aktif</p>
+                    <p style={{ fontSize:'13px', color:'#6B7280' }}>Sistem akan memantau pengeluaranmu secara otomatis.</p>
+                  </div>
                 </div>
+                
+                {/* Tombol Baru untuk mematikan / menonaktifkan fitur */}
+                <button 
+                  onClick={handleNonaktifkan} 
+                  style={{
+                    padding:'8px 16px', 
+                    backgroundColor:'white', 
+                    border:`1px solid ${RED}`, 
+                    color:RED, 
+                    borderRadius:'8px', 
+                    fontSize:'12px', 
+                    fontWeight:'600', 
+                    cursor:'pointer',
+                    transition:'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#FEF2F2'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                >
+                  🛑 Nonaktifkan Fitur
+                </button>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 
@@ -10,6 +10,7 @@ const RED = '#C0392B'
 
 export default function UserProfile() {
   const navigate = useNavigate()
+  const fileInputRef = useRef(null) // Ref untuk menembak input file yang tersembunyi
   const [activeMenu, setActiveMenu] = useState('profil')
   const [showLogout, setShowLogout] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -17,6 +18,7 @@ export default function UserProfile() {
 
   const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
   const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
+  const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '') // State untuk menampung gambar profil
 
   const [form, setForm] = useState({
     nama: localStorage.getItem('user_name') || 'User',
@@ -43,6 +45,24 @@ export default function UserProfile() {
     return cleanName.split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase()
   }
 
+  // Fungsi mengubah file gambar menjadi string Base64
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // Batasi ukuran file max 2MB agar database tidak bengkak
+        alert('Ukuran file terlalu besar! Maksimal 2MB.')
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatar(reader.result) // reader.result berisi string base64 gambar
+        setSaved(false)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -62,9 +82,11 @@ export default function UserProfile() {
           const fetchedTglLahir = userData.tanggal_lahir || ''
           const fetchedGender = userData.jenis_kelamin || 'Laki-laki'
           const fetchedKota = userData.kota || ''
+          const fetchedAvatar = userData.avatar || '' // Ambil field avatar dari backend jika ada
 
           setNamaUser(fetchedName)
           setEmailUser(fetchedEmail)
+          setAvatar(fetchedAvatar)
           
           setForm({
             nama: fetchedName,
@@ -85,6 +107,7 @@ export default function UserProfile() {
           localStorage.setItem('user_name', fetchedName)
           localStorage.setItem('user_email', fetchedEmail)
           localStorage.setItem('user_username', fetchedUsername)
+          if(fetchedAvatar) localStorage.setItem('user_avatar', fetchedAvatar)
         }
       } catch (error) {
         console.error('Gagal memuat profil dari backend:', error)
@@ -109,18 +132,21 @@ export default function UserProfile() {
       const token = localStorage.getItem('token')
       if (!token) return
 
+      // Menyertakan data avatar (string base64) ke dalam payload JSON biasa
       await axios.put('http://127.0.0.1:8000/api/user/update', {
         name: form.nama,
         username: form.username,
         tanggal_lahir: form.tanggalLahir,
         kota: form.kota,
-        jenis_kelamin: form.jenisKelamin
+        jenis_kelamin: form.jenisKelamin,
+        avatar: avatar // Kirim data string foto profil ke backend
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
       
       localStorage.setItem('user_name', form.nama)
       localStorage.setItem('user_username', form.username)
+      if (avatar) localStorage.setItem('user_avatar', avatar)
       setNamaUser(form.nama)
       
       triggerNotif('Perubahan informasi pribadi berhasil disimpan ke server!')
@@ -180,6 +206,9 @@ export default function UserProfile() {
         .nav-link:hover { background:rgba(255,255,255,0.15); }
         .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; font-size:14px; }
         input:focus { border-color:${MAROON} !important; outline:none; background:#fff !important; }
+        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 12px; cursor: pointer; }
+        .avatar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; alignItems: center; justify-content: center; color: white; font-size: 11px; opacity: 0; transition: opacity 0.2s ease; }
+        .avatar-container:hover .avatar-overlay { opacity: 1; }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
@@ -193,8 +222,12 @@ export default function UserProfile() {
             <Link to="/risk-profile" className="nav-link">Risk Profile</Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>{getInitials(namaUser)}</span>
+            <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {avatar ? (
+                <img src={avatar} alt="Nav Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>{getInitials(namaUser)}</span>
+              )}
             </div>
             <span style={{ color: 'white', fontSize: '14px' }}>{namaUser}</span>
           </div>
@@ -205,10 +238,27 @@ export default function UserProfile() {
           {/* SIDEBAR */}
           <div style={{ width: '260px', flexShrink: 0 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '28px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              
+              {/* SECTION FOTO PROFIL (Bisa diklik untuk ganti foto) */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <div style={{ width: '80px', height: '80px', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                  <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarChange} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                />
+                <div className="avatar-container" onClick={() => fileInputRef.current.click()}>
+                  {avatar ? (
+                    <img src={avatar} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${GOLD}` }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
+                    </div>
+                  )}
+                  <div className="avatar-overlay" style={{ borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Ganti Foto</div>
                 </div>
+
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: MAROON }}>{form.nama}</h3>
                 <p style={{ fontSize: '12px', color: '#9CA3AF' }}>{form.email}</p>
               </div>
@@ -263,8 +313,8 @@ export default function UserProfile() {
 
       {/* LOGOUT MODAL */}
       {showLogout && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifycontent: 'center', zIndex: 999 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center', margin: 'auto' }}>
             <h3>Yakin ingin keluar?</h3>
             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
               <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: `1.5px solid ${MAROON}`, cursor: 'pointer' }}>Batal</button>
