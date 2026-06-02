@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import axios from 'axios' // 🟢 MENGGUNAKAN AXIOS AGAR STABIL DAN SEJALUR DENGAN BACKEND
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -15,7 +16,7 @@ export default function RiskProfile() {
     localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User'
   )
 
-  // TAMBAHAN: State untuk melacak foto profil dari localStorage (bisa berupa URL atau Base64)
+  // State untuk melacak foto profil dari localStorage
   const [fotoUser, setFotoUser] = useState(
     localStorage.getItem('fotoUser') || localStorage.getItem('user_avatar') || null
   )
@@ -75,7 +76,7 @@ export default function RiskProfile() {
   }
 
   // ==========================================
-  // PROSES SUBMIT
+  // PROSES SUBMIT (SUDAH DI-FIX DENGAN AXIOS & EMAIL JANGKAR)
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -95,38 +96,38 @@ export default function RiskProfile() {
 
     try {
       const token = localStorage.getItem('token')
+      const userEmail = localStorage.getItem('user_email') // 🟢 Ambil email user yang sedang aktif login
 
-      const response = await fetch('http://127.0.0.1:8000/api/risk-profile', {
-        method: 'POST',
+      // Mengirim request menggunakan Axios lengkap dengan Bearer Token dan Email pelindung
+      const response = await axios.post('http://127.0.0.1:8000/api/risk-profile', {
+        usia:        parseInt(form.usia),          
+        pekerjaan:   form.pekerjaan,
+        penghasilan: parseFloat(form.penghasilan || 0),
+        email:       userEmail // 🟢 Disuntikkan ke body payload agar data tidak tertukar di Laravel
+      }, {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          usia:        parseInt(form.usia),          
-          pekerjaan:   form.pekerjaan,
-          penghasilan: parseFloat(form.penghasilan || 0),
-        })
+          'Authorization': `Bearer ${token}`
+        }
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
+      // Jika Axios sukses mengirim data (status 200 atau 201)
+      if (response.status === 200 || response.status === 201) {
+        // Simpan data cadangan ke localStorage untuk kebutuhan halaman Budget Planner / Final Analyze
         localStorage.setItem('penghasilan', form.penghasilan)
-        localStorage.setItem('namaUser',    form.nama)
-        localStorage.setItem('pekerjaan',   form.pekerjaan)
+        localStorage.setItem('user_age', form.usia)
+        localStorage.setItem('user_job', form.pekerjaan)
 
-        setNamaUser(form.nama)
         setSukses(true)
         setTimeout(() => navigate('/budget-planner'), 1500)
-
       } else {
-        setError(data.message || 'Gagal menyimpan data!')
+        setError('Gagal menyimpan data ke server!')
       }
 
     } catch (err) {
-      setError('Gagal terhubung ke server!')
+      console.error(err)
+      setError(err.response?.data?.error || 'Gagal terhubung ke server!')
     } finally {
       setLoading(false)
     }
@@ -194,7 +195,6 @@ export default function RiskProfile() {
             <Link to="/final-analyze" className="nav-link">Final Analyze</Link>
           </div>
 
-          {/* BAGIAN AVATAR BARU */}
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             <div style={{ 
               width:'36px', 
@@ -203,20 +203,18 @@ export default function RiskProfile() {
               borderRadius:'50%', 
               display:'flex', 
               alignItems:'center', 
-              justifyContent:'center', 
+              justifyContent: 'center', 
               boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
-              overflow: 'hidden' // Supaya foto yang bulat tidak keluar jalur border
+              overflow: 'hidden'
             }}>
               {fotoUser ? (
-                // Jika foto profil ada di localStorage, tampilkan gambar
                 <img 
                   src={fotoUser} 
                   alt="Profile" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  onError={() => setFotoUser(null)} // Jika link gambar rusak, otomatis balik ke Inisial Huruf
+                  onError={() => setFotoUser(null)}
                 />
               ) : (
-                // Jika tidak ada foto profil, pakai inisial nama
                 <span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>
                   {getInisial(namaUser)}
                 </span>

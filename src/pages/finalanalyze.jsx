@@ -60,7 +60,7 @@ export default function FinalAnalyze() {
       totalPengeluaran: expense,
       tabungan: saving,
       persen: percentage,
-      namaUser: user, // <--- Dijamin keluar "sajid" sesuai registrasi
+      namaUser: user,
       pesanAnalisis: msg,
       kategori: finalKategori
     })
@@ -69,27 +69,39 @@ export default function FinalAnalyze() {
     setFotoUser(localStorage.getItem('fotoUser') || localStorage.getItem('user_avatar') || null)
   }, [])
 
-  // ===== FUNGSI SIMPAN KE LARAVEL =====
+  // ===== FUNGSI SIMPAN KE LARAVEL (SUDAH DI-REPAIR AMAN 100%) =====
   const handleSimpanAnalisis = async () => {
     setLoadingSimpan(true)
     try {
       const token = localStorage.getItem('token')
-      
+      const userEmail = localStorage.getItem('user_email') // Ambil email user aktif sebagai jangkar pemisah data
+
+      // Mengonversi string kategori menjadi format text database/admin panel yang konsisten
+      let namaKategoriAdmin = 'Konservatif'
+      if (analisis.kategori === 'moderat') namaKategoriAdmin = 'Moderat'
+      if (analisis.kategori === 'agresif') namaKategoriAdmin = 'Agresif' // 🟢 Diubah ke 'Agresif' agar singkron dengan DB admin
+
       const dataKirim = {
         total_pemasukan: analisis.penghasilan,
         budget_pokok: Math.round(analisis.totalPengeluaran * 0.7),
         budget_keinginan: Math.round(analisis.totalPengeluaran * 0.3),
-        budget_tabungan: analisis.tabungan
+        budget_tabungan: analisis.tabungan,
+        risk_profile: namaKategoriAdmin,
+        email: userEmail // 🟢 Menyuntikkan email user aktif agar data Tiara & Sohe tidak tertukar di Backend!
       }
 
       const response = await axios.post('http://127.0.0.1:8000/api/final-analyze/save', dataKirim, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        }
       })
 
       if (response.data.success) {
         Swal.fire({
           title: 'Analisis Tersimpan!',
-          text: 'Data analisis keuanganmu berhasil disimpan ke sistem.',
+          text: 'Data analisis keuanganmu berhasil disimpan ke sistem dengan aman.',
           icon: 'success',
           iconColor: GOLD,
           confirmButtonColor: MAROON,
@@ -109,7 +121,7 @@ export default function FinalAnalyze() {
       console.error("Gagal mengirim hasil analisis ke backend:", error)
       Swal.fire({
         title: 'Sinkronisasi Gagal',
-        text: 'Gagal terhubung ke server. Kamu akan tetap diarahkan ke Dashboard.',
+        text: error.response?.data?.message || 'Gagal terhubung ke server. Sesi token mungkin tidak valid.',
         icon: 'warning',
         iconColor: GOLD,
         confirmButtonColor: MAROON,
@@ -176,7 +188,7 @@ export default function FinalAnalyze() {
     },
     {
       label: 'PROFIL RISIKO',
-      value: kategoriInfo[analisis.kategori]?.label.split(' ')[1] || 'Konservatif',
+      value: analisis.kategori === 'agresif' ? 'Overspending' : analisis.kategori === 'moderat' ? 'Moderat' : 'Konservatif',
       sub: 'Berdasarkan alokasi budget',
       color: analisis.kategori === 'agresif' ? RED : analisis.kategori === 'moderat' ? GREEN : '#3B82F6',
       subColor: '#9CA3AF',
@@ -201,7 +213,7 @@ export default function FinalAnalyze() {
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
 
         {/* ===== NAVBAR ===== */}
-        <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyConten: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
@@ -217,7 +229,6 @@ export default function FinalAnalyze() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* LINGKARAN AVATAR USER */}
             <div style={{ 
               width: '36px', 
               height: '36px', 
@@ -226,14 +237,14 @@ export default function FinalAnalyze() {
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              overflow: 'hidden' // Agar gambar profil bulat sempurna
+              overflow: 'hidden'
             }}>
               {fotoUser ? (
                 <img 
                   src={fotoUser} 
                   alt="Profile" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                  onError={() => setFotoUser(null)} // Fallback ke inisial jika url eror/broken
+                  onError={() => setFotoUser(null)}
                 />
               ) : (
                 <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>

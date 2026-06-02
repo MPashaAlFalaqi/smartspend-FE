@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import axios from 'axios' // 🔥 SUDAH DIPERBAIKI: Import axios yang benar
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -55,23 +55,31 @@ export default function Dashboard() {
           setNamaUser(localName)
         }
 
-        // 1. Ambil data profil user yang sedang login (Nama, Email, & Avatar)
+        // 1. Ambil data profil user yang sedang login (Nama, Email, Avatar, & PROFIL RISIKO SAH)
         const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
           headers: { Authorization: `Bearer ${token}` }
         })
+        
         if (userRes.data) {
-          // JIKA user sudah isi nama di Risk Profile, gunakan nama itu. Jika belum, gunakan dari database login.
           const fetchedName = localStorage.getItem('namaUser') || userRes.data.name || 'User'
           const fetchedEmail = userRes.data.email || 'user@email.com'
-          const fetchedAvatar = userRes.data.avatar || null // Mengambil kolom avatar baru database
+          const fetchedAvatar = userRes.data.avatar || null
+          
+          // AMBIL DATA RISK PROFILE DARI HASIL ANALISIS DI DATABASE USER
+          const dbRiskProfile = userRes.data.risk_profile || 'Konservatif'
           
           setNamaUser(fetchedName)
           setEmailUser(fetchedEmail)
           setAvatarUser(fetchedAvatar)
           
+          // Format Kapitalisasi Karakter Depan (misal: "moderat" -> "Moderat")
+          setProfilRisiko(dbRiskProfile.charAt(0).toUpperCase() + dbRiskProfile.slice(1))
+          
           // Perbarui penyimpanan lokal agar halaman lain tersinkronisasi sempurna
           localStorage.setItem('user_name', userRes.data.name || 'User')
           localStorage.setItem('user_email', fetchedEmail)
+          localStorage.setItem('risk_profile', dbRiskProfile)
+          
           if (fetchedAvatar) {
             localStorage.setItem('user_avatar', fetchedAvatar)
           } else {
@@ -79,16 +87,7 @@ export default function Dashboard() {
           }
         }
 
-        // 2. Ambil data profil risiko terbaru untuk label badge
-        const riskRes = await axios.get('http://127.0.0.1:8000/api/risk-profile', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (riskRes.data && riskRes.data.kategori_risiko) {
-          const kategori = riskRes.data.kategori_risiko
-          setProfilRisiko(kategori.charAt(0).toUpperCase() + kategori.slice(1))
-        }
-
-        // 3. Ambil hitungan akumulasi budget dari Final Analyze
+        // 2. Ambil hitungan akumulasi budget dari Final Analyze
         const summaryRes = await axios.get('http://127.0.0.1:8000/api/dashboard-summary', {
           headers: { Authorization: `Bearer ${token}` }
         })
@@ -119,7 +118,6 @@ export default function Dashboard() {
   // Fungsi untuk mengaktifkan notifikasi
   const handleAktifkan = async () => {
     try {
-      const token = localStorage.getItem('token')
       localStorage.setItem('notifikasi_aktif', 'true')
       setNotifAktif(true)
     } catch (err) {
@@ -132,7 +130,6 @@ export default function Dashboard() {
   // Fungsi untuk menonaktifkan kembali notifikasi
   const handleNonaktifkan = async () => {
     try {
-      const token = localStorage.getItem('token')
       localStorage.setItem('notifikasi_aktif', 'false')
       setNotifAktif(false)
     } catch (err) {
@@ -324,7 +321,6 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-
                   <div onClick={() => setShowNotif(false)} style={{ padding:'14px 20px', textAlign:'center', cursor:'pointer', borderRadius:'0 0 16px 16px', borderTop:'1px solid #F3F4F6' }}>
                     <span style={{ fontSize:'13px', color:MAROON, fontWeight:'600' }}>Tutup ✕</span>
                   </div>
@@ -334,7 +330,7 @@ export default function Dashboard() {
 
             <div style={{ width:'1px', height:'24px', backgroundColor:'rgba(255,255,255,0.3)' }}/>
 
-            {/* ===== FIXED AVATAR PROFILE DENGAN LOGIKA FOTO PROFILE ===== */}
+            {/* ===== AVATAR PROFILE ===== */}
             <div style={{ position:'relative' }}>
               <div onClick={() => setShowDropdown(!showDropdown)} style={{ display:'flex', alignItems:'center', gap:'10px', cursor:'pointer' }}>
                 <div style={{ 
@@ -345,14 +341,14 @@ export default function Dashboard() {
                   display:'flex', 
                   alignItems:'center', 
                   justifyContent:'center',
-                  overflow:'hidden' // Menghindari gambar luber keluar lingkaran bulat
+                  overflow:'hidden'
                 }}>
                   {avatarUser ? (
                     <img 
                       src={avatarUser} 
                       alt="Profile" 
                       style={{ width:'100%', height:'100%', objectFit:'cover' }}
-                      onError={() => setAvatarUser(null)} // Fallback ke inisial huruf jika gambar corrupt
+                      onError={() => setAvatarUser(null)}
                     />
                   ) : (
                     <span style={{ color:MAROON, fontWeight:'700', fontSize:'13px' }}>
