@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
+import { toast } from 'react-hot-toast' // 1. Import React Hot Toast
 
 const MAROON = '#6B0F1A'
 const GOLD = '#C9A84C'
@@ -13,8 +14,6 @@ export default function UserProfile() {
   const fileInputRef = useRef(null) 
   const [activeMenu, setActiveMenu] = useState('profil')
   const [showLogout, setShowLogout] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [savedMessage, setSavedMessage] = useState('')
 
   const [namaUser, setNamaUser] = useState(localStorage.getItem('user_name') || 'User')
   const [emailUser, setEmailUser] = useState(localStorage.getItem('user_email') || 'user@email.com')
@@ -49,16 +48,47 @@ export default function UserProfile() {
     const file = e.target.files[0]
     if (file) {
       if (file.size > 2 * 1024 * 1024) { 
-        alert('Ukuran file terlalu besar! Maksimal 2MB.')
+        toast.error('Ukuran file terlalu besar! Maksimal 2MB.')
         return
       }
       
       const reader = new FileReader()
       reader.onloadend = () => {
         setAvatar(reader.result) 
-        setSaved(false)
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  // FITUR BARU: Fungsi untuk menghapus foto profil / avatar
+  const handleDeleteAvatar = async (e) => {
+    e.stopPropagation() // Mencegah terpicunya trigger click upload file
+    
+    if (window.confirm('Apakah Anda yakin ingin menghapus foto profil ini?')) {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        // Panggil endpoint backend Laravel untuk hapus foto
+        await axios.post('http://127.0.0.1:8000/api/user/delete-photo', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        // Reset state & localStorage di Frontend
+        setAvatar('')
+        localStorage.removeItem('user_avatar')
+        
+        toast.success('Foto profil berhasil dihapus!', {
+          style: { border: `1px solid ${MAROON}`, padding: '16px', color: '#1A1A1A' },
+          iconTheme: { primary: MAROON, secondary: '#FFF' },
+        })
+      } catch (error) {
+        console.error(error)
+        // Fallback jika API backend belum siap, izinkan frontend untuk reset state visual dahulu
+        setAvatar('')
+        localStorage.removeItem('user_avatar')
+        toast.success('Foto profil dilepas dari tampilan lokal.')
+      }
     }
   }
 
@@ -106,7 +136,11 @@ export default function UserProfile() {
           localStorage.setItem('user_name', fetchedName)
           localStorage.setItem('user_email', fetchedEmail)
           localStorage.setItem('user_username', fetchedUsername)
-          if(fetchedAvatar) localStorage.setItem('user_avatar', fetchedAvatar)
+          if(fetchedAvatar) {
+            localStorage.setItem('user_avatar', fetchedAvatar)
+          } else {
+            localStorage.removeItem('user_avatar')
+          }
         }
       } catch (error) {
         console.error('Gagal memuat profil dari backend:', error)
@@ -117,12 +151,10 @@ export default function UserProfile() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
-    setSaved(false)
   }
 
   const handleSecurityChange = (e) => {
     setSecurityForm({ ...securityForm, [e.target.name]: e.target.value })
-    setSaved(false)
   }
 
   const handleSaveProfil = async (e) => {
@@ -132,15 +164,14 @@ export default function UserProfile() {
       if (!token) return
 
       if (!form.nama) {
-        alert('Nama Lengkap wajib diisi!')
+        toast.error('Nama Lengkap wajib diisi!')
         return
       }
 
-      // FIXED: Memetakan variabel secara eksplisit ke snake_case agar lolos validasi Laravel
       const payload = {
         nama: form.nama,
         username: form.username,
-        tanggal_lahir: form.tanggalLahir,
+        tanggal_lahir: form.tanggalLahir, 
         kota: form.kota,
         jenis_kelamin: form.jenisKelamin,
         avatar: avatar 
@@ -152,17 +183,23 @@ export default function UserProfile() {
       
       localStorage.setItem('user_name', form.nama)
       localStorage.setItem('user_username', form.username)
-      if (avatar) localStorage.setItem('user_avatar', avatar)
+      if (avatar) {
+        localStorage.setItem('user_avatar', avatar)
+      } else {
+        localStorage.removeItem('user_avatar')
+      }
       setNamaUser(form.nama)
       
-      triggerNotif('Perubahan informasi pribadi berhasil disimpan ke server!')
+      toast.success('Profil Anda berhasil diperbarui!', {
+        style: { border: `1px solid ${MAROON}`, padding: '16px', color: '#1A1A1A' },
+        iconTheme: { primary: MAROON, secondary: '#FFF' },
+      })
     } catch (error) {
       console.error(error)
-      // SAKLAR PINTU DARURAT: Menampilkan pesan error spesifik jika Laravel menolak data
       if (error.response && error.response.data) {
-        alert(`Gagal menyimpan: ${JSON.stringify(error.response.data.message || error.response.data.errors)}`)
+        toast.error(`Gagal menyimpan: ${error.response.data.message || 'Periksa kembali data Anda.'}`)
       } else {
-        alert('Gagal menyimpan perubahan ke database.')
+        toast.error('Gagal menyimpan perubahan ke database.')
       }
     }
   }
@@ -170,7 +207,7 @@ export default function UserProfile() {
   const handleSaveKeamanan = async (e) => {
     e.preventDefault()
     if (securityForm.passwordBaru !== securityForm.konfirmasiPassword) {
-      alert('Konfirmasi password baru tidak cocok!')
+      toast.error('Konfirmasi password baru tidak cocok!')
       return
     }
 
@@ -191,16 +228,13 @@ export default function UserProfile() {
       setEmailUser(securityForm.emailBaru)
       localStorage.setItem('user_email', securityForm.emailBaru)
       
-      triggerNotif('Pengaturan keamanan berhasil diperbarui ke server!')
+      toast.success('Pengaturan keamanan berhasil diperbarui!', {
+        style: { border: `1px solid ${MAROON}`, padding: '16px', color: '#1A1A1A' },
+        iconTheme: { primary: MAROON, secondary: '#FFF' },
+      })
     } catch (error) {
-      alert('Gagal memperbarui data keamanan. Pastikan password lama Anda benar.')
+      toast.error('Gagal memperbarui keamanan. Pastikan password lama Anda benar.')
     }
-  }
-
-  const triggerNotif = (msg) => {
-    setSavedMessage(msg)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
   }
 
   const inputStyle = {
@@ -213,34 +247,58 @@ export default function UserProfile() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
-        .nav-link { color:white; text-decoration:none; font-size:14px; padding:6px 12px; border-radius:20px; }
+        .nav-link { color:white; text-decoration:none; font-size:14px; padding:6px 16px; border-radius:20px; transition: background 0.2s; }
         .nav-link:hover { background:rgba(255,255,255,0.15); }
         .menu-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:10px; cursor:pointer; font-size:14px; }
         input:focus { border-color:${MAROON} !important; outline:none; background:#fff !important; }
-        .avatar-container { position: relative; width: 80px; height: 80px; margin: 0 auto 12px; cursor: pointer; }
+        
+        .avatar-wrapper { position: relative; width: 80px; height: 80px; margin: 0 auto 12px; }
+        .avatar-container { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; cursor: pointer; position: relative; }
         .avatar-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; opacity: 0; transition: opacity 0.2s ease; }
         .avatar-container:hover .avatar-overlay { opacity: 1; }
+        
+        .btn-delete-photo { position: absolute; top: -2px; right: -2px; width: 22px; height: 22px; border-radius: 50%; background-color: ${RED}; color: white; border: 1.5px solid white; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; transition: transform 0.1s ease; }
+        .btn-delete-photo:hover { transform: scale(1.1); background-color: #A0281C; }
       `}</style>
 
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
-        {/* NAVBAR */}
-        <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
-            <span style={{ color: GOLD, fontWeight: '700', fontSize: '20px' }}>SmartSpend</span>
+        
+        {/* === FIXED & CLEAN NAVBAR === */}
+        <nav style={{ 
+          backgroundColor: MAROON, 
+          height: '64px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          padding: '0 32px', 
+          position: 'sticky', 
+          top: 0, 
+          zIndex: 100,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          {/* SISI KIRI: LOGO */}
+          <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }} onClick={() => navigate('/dashboard')}>
+            <span style={{ color: GOLD, fontWeight: '700', fontSize: '22px' }}>SmartSpend</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          
+          {/* SISI TENGAH: MENU UTAMA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Link to="/dashboard" className="nav-link">Dashboard</Link>
             <Link to="/risk-profile" className="nav-link">Risk Profile</Link>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          
+          {/* SISI KANAN: PROFIL USER */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: '500', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {namaUser}
+            </span>
+            <div style={{ width: '38px', height: '38px', backgroundColor: GOLD, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '2px solid white', flexShrink: 0 }}>
               {avatar ? (
                 <img src={avatar} alt="Nav Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>{getInitials(namaUser)}</span>
+                <span style={{ color: MAROON, fontWeight: '700', fontSize: '14px' }}>{getInitials(namaUser)}</span>
               )}
             </div>
-            <span style={{ color: 'white', fontSize: '14px' }}>{namaUser}</span>
           </div>
         </nav>
 
@@ -250,7 +308,7 @@ export default function UserProfile() {
           <div style={{ width: '260px', flexShrink: 0 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '28px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               
-              {/* SECTION FOTO PROFIL */}
+              {/* SECTION FOTO PROFIL DENGAN FITUR HAPUS FOTO */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <input 
                   type="file" 
@@ -259,39 +317,51 @@ export default function UserProfile() {
                   accept="image/*" 
                   style={{ display: 'none' }} 
                 />
-                <div className="avatar-container" onClick={() => fileInputRef.current.click()}>
-                  {avatar ? (
-                    <img src={avatar} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${GOLD}` }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
-                    </div>
+                <div className="avatar-wrapper">
+                  {/* Tombol Hapus Eksklusif: Hanya muncul saat ada custom avatar image */}
+                  {avatar && (
+                    <button 
+                      type="button" 
+                      className="btn-delete-photo" 
+                      onClick={handleDeleteAvatar}
+                      title="Hapus Foto Profil"
+                    >
+                      ✕
+                    </button>
                   )}
-                  <div className="avatar-overlay" style={{ borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center' }}>Ganti Foto</div>
+                  
+                  <div className="avatar-container" onClick={() => fileInputRef.current.click()}>
+                    {avatar ? (
+                      <img src={avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', border: `2px solid ${GOLD}`, borderRadius: '50%' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${MAROON}, ${GOLD})`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ color: 'white', fontSize: '28px', fontWeight: '700' }}>{getInitials(form.nama)}</span>
+                      </div>
+                    )}
+                    <div className="avatar-overlay">Ganti Foto</div>
+                  </div>
                 </div>
 
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: MAROON }}>{form.nama}</h3>
-                <p style={{ fontSize: '12px', color: '#9CA3AF' }}>{form.email}</p>
+                <p style={{ fontSize: '12px', color: '#9CA3AF' }}>{emailUser}</p>
               </div>
 
               <div className="menu-item" onClick={() => setActiveMenu('profil')} style={{ backgroundColor: activeMenu === 'profil' ? MAROON : 'transparent', color: activeMenu === 'profil' ? 'white' : '#374151' }}>👤 Informasi Pribadi</div>
               <div className="menu-item" onClick={() => setActiveMenu('keamanan')} style={{ backgroundColor: activeMenu === 'keamanan' ? MAROON : 'transparent', color: activeMenu === 'keamanan' ? 'white' : '#374151' }}>🔒 Keamanan</div>
-              <div className="menu-item" onClick={() => setShowLogout(true)} style={{ color: RED, marginTop: '10px' }}>🚪 Keluar</div>
+              <div className="menu-item" onClick={() => setShowLogout(true)} style={{ color: RED, marginTop: '10px' }}>🚪 Keluar Akun</div>
             </div>
           </div>
 
           {/* MAIN CONTENT */}
           <div style={{ flex: 1 }}>
             <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '36px 40px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-              {saved && <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '12px', borderRadius: '10px', color: GREEN, marginBottom: '20px' }}>✅ {savedMessage}</div>}
-
               {activeMenu === 'profil' ? (
                 <form onSubmit={handleSaveProfil}>
                   <h2 style={{ color: MAROON, marginBottom: '20px' }}>Informasi Pribadi</h2>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                     <div><label style={{ fontSize: '12px', color: '#6B7280' }}>NAMA LENGKAP</label><input name="nama" value={form.nama} onChange={handleChange} style={inputStyle} /></div>
                     <div><label style={{ fontSize: '12px', color: '#6B7280' }}>USERNAME</label><input name="username" value={form.username} onChange={handleChange} style={inputStyle} /></div>
-                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>TANGGAL LAHIR</label><input name="tanggalLahir" placeholder="YYYY-MM-DD" value={form.tanggalLahir} onChange={handleChange} style={inputStyle} /></div>
+                    <div><label style={{ fontSize: '12px', color: '#6B7280' }}>TANGGAL LAHIR</label><input type="date" name="tanggalLahir" value={form.tanggalLahir} onChange={handleChange} style={inputStyle} /></div>
                     <div><label style={{ fontSize: '12px', color: '#6B7280' }}>KOTA DOMISILI</label><input name="kota" value={form.kota} onChange={handleChange} style={inputStyle} /></div>
                   </div>
                   <div style={{ marginBottom: '20px' }}>
@@ -300,7 +370,7 @@ export default function UserProfile() {
                       <button key={g} type="button" onClick={() => setForm({ ...form, jenisKelamin: g })} style={{ padding: '10px 20px', marginRight: '10px', border: 'none', borderRadius: '10px', backgroundColor: form.jenisKelamin === g ? MAROON : '#F3F4F6', color: form.jenisKelamin === g ? 'white' : '#6B7280', cursor: 'pointer' }}>{g}</button>
                     ))}
                   </div>
-                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Simpan Perubahan</button>
+                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500' }}>Simpan Perubahan</button>
                 </form>
               ) : (
                 <form onSubmit={handleSaveKeamanan}>
@@ -314,7 +384,7 @@ export default function UserProfile() {
                     <div><label style={{ fontSize: '12px', color: '#6B7280' }}>PASSWORD BARU</label><input name="passwordBaru" type="password" value={securityForm.passwordBaru} onChange={handleSecurityChange} style={inputStyle} placeholder="••••••••" /></div>
                     <div><label style={{ fontSize: '12px', color: '#6B7280' }}>KONFIRMASI PASSWORD</label><input name="konfirmasiPassword" type="password" value={securityForm.konfirmasiPassword} onChange={handleSecurityChange} style={inputStyle} placeholder="••••••••" /></div>
                   </div>
-                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Perbarui Keamanan</button>
+                  <button type="submit" style={{ padding: '12px 24px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500' }}>Perbarui Keamanan</button>
                 </form>
               )}
             </div>
@@ -324,12 +394,13 @@ export default function UserProfile() {
 
       {/* LOGOUT MODAL */}
       {showLogout && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifycontent: 'center', zIndex: 999 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
           <div style={{ backgroundColor: 'white', borderRadius: '20px', padding: '40px', width: '100%', maxWidth: '420px', textAlign: 'center', margin: 'auto' }}>
-            <h3>Yakin ingin keluar?</h3>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-              <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: `1.5px solid ${MAROON}`, cursor: 'pointer' }}>Batal</button>
-              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Keluar</button>
+            <h3 style={{ marginBottom: '10px' }}>Yakin ingin keluar?</h3>
+            <p style={{ fontSize: '14px', color: '#6B7280', marginBottom: '20px' }}>Anda harus login kembali untuk mengakses data keuangan SmartSpend.</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setShowLogout(false)} style={{ flex: 1, height: '48px', borderRadius: '10px', border: `1.5px solid ${MAROON}`, color: MAROON, backgroundColor: 'transparent', cursor: 'pointer', fontWeight: '500' }}>Batal</button>
+              <button onClick={() => { localStorage.clear(); navigate('/login'); }} style={{ flex: 1, height: '48px', backgroundColor: MAROON, color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '500' }}>Keluar</button>
             </div>
           </div>
         </div>

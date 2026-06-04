@@ -22,7 +22,6 @@ const CREAM = '#F5F0E8'
 export default function AdminReports() {
   const navigate = useNavigate()
 
-  // 🟢 FIXED: Perbaikan deklarasi state pembaca data stats dari Laravel
   const [dataStats, setDataStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,13 +30,14 @@ export default function AdminReports() {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
   }
 
-  // 🟢 FETCH DATA DARI ENDPOINT TERPADU
+  // 🟢 FIXED: Mengubah validasi agar langsung menerima payload objek murni dari Laravel
   const fetchReportData = async () => {
     try {
       setLoading(true)
       const response = await axios.get('http://localhost:8000/api/admin/dashboard-data', authHeader)
       
-      if (response.data.status === 'success') {
+      // Jika response data dari Laravel berhasil ditangkap (tidak kosong/null)
+      if (response.data) {
         setDataStats(response.data)
       }
     } catch (err) {
@@ -135,23 +135,22 @@ export default function AdminReports() {
             
             <div style={{ backgroundColor:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 4px 20px rgba(0,0,0,0.03)' }}>
               <span style={{ fontSize:'13px', color:'#9CA3AF', fontWeight:'500' }}>TOTAL PENGGUNA</span>
-              <h3 style={{ fontSize:'28px', color:MAROON, fontWeight:'700', marginTop:'4px' }}>{dataStats?.total_users} <span style={{ fontSize:'14px', color:'#6B7280', fontWeight:'400' }}>Jiwa</span></h3>
+              <h3 style={{ fontSize:'28px', color:MAROON, fontWeight:'700', marginTop:'4px' }}>{dataStats?.total_users ?? 0} <span style={{ fontSize:'14px', color:'#6B7280', fontWeight:'400' }}>Jiwa</span></h3>
             </div>
 
             <div style={{ backgroundColor:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 4px 20px rgba(0,0,0,0.03)' }}>
               <span style={{ fontSize:'13px', color:'#2D6A4F', fontWeight:'500' }}>PENGGUNA AKTIF</span>
-              <h3 style={{ fontSize:'28px', color:'#2D6A4F', fontWeight:'700', marginTop:'4px' }}>{dataStats?.active_users}</h3>
+              <h3 style={{ fontSize:'28px', color:'#2D6A4F', fontWeight:'700', marginTop:'4px' }}>{dataStats?.active_users ?? 0}</h3>
             </div>
 
-            {/* 🟢 FIXED: Sintaks inline objek style dibetulkan total pada baris ini */}
             <div style={{ backgroundColor:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 4px 20px rgba(0,0,0,0.03)' }}>
               <span style={{ fontSize:'13px', color:'#C0392B', fontWeight:'500' }}>AKUN DIBLOKIR</span>
-              <h3 style={{ padding:0, fontSize:'28px', color:'#C0392B', fontWeight:'700', marginTop:'4px' }}>{dataStats?.non_active_users}</h3>
+              <h3 style={{ padding:0, fontSize:'28px', color:'#C0392B', fontWeight:'700', marginTop:'4px' }}>{dataStats?.non_active_users ?? 0}</h3>
             </div>
 
             <div style={{ backgroundColor:'white', padding:'24px', borderRadius:'16px', boxShadow:'0 4px 20px rgba(0,0,0,0.03)' }}>
               <span style={{ fontSize:'13px', color:GOLD, fontWeight:'500' }}>MINGGU INI</span>
-              <h3 style={{ fontSize:'28px', color:GOLD, fontWeight:'700', marginTop:'4px' }}>+{dataStats?.new_users_this_week}</h3>
+              <h3 style={{ fontSize:'28px', color:GOLD, fontWeight:'700', marginTop:'4px' }}>+{dataStats?.new_users_this_week ?? 0}</h3>
             </div>
 
           </div>

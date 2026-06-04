@@ -76,7 +76,7 @@ export default function RiskProfile() {
   }
 
   // ==========================================
-  // PROSES SUBMIT (SUDAH DI-FIX DENGAN AXIOS & EMAIL JANGKAR)
+  // PROSES SUBMIT (SUDAH DI-FIX AGAR SINKRON KE ADMIN)
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -86,7 +86,10 @@ export default function RiskProfile() {
       return
     }
 
-    if (parseInt(form.usia) <= 0) {
+    const usiaAngka = parseInt(form.usia)
+    const penghasilanAngka = parseFloat(form.penghasilan || 0)
+
+    if (usiaAngka <= 0) {
       setError('Harap masukkan usia yang valid (lebih dari 0).')
       return
     }
@@ -94,16 +97,27 @@ export default function RiskProfile() {
     setLoading(true)
     setError('')
 
+    // 🟢 LOGIKA KALKULASI HASIL PROFIL RISIKO OTOMATIS
+    // Menentukan status risiko berdasarkan kombinasi usia produktif dan kemampuan finansial
+    let hasilKalkulasiRisiko = 'Moderat' 
+
+    if (usiaAngka < 30 && penghasilanAngka > 10000000) {
+      hasilKalkulasiRisiko = 'Agresif' // Usia muda & pendapatan tinggi cenderung berani mengambil risiko tinggi
+    } else if (usiaAngka > 50 || penghasilanAngka < 4000000) {
+      hasilKalkulasiRisiko = 'Konservatif' // Usia senja atau pendapatan terbatas cenderung cari aman
+    }
+
     try {
       const token = localStorage.getItem('token')
-      const userEmail = localStorage.getItem('user_email') // 🟢 Ambil email user yang sedang aktif login
+      const userEmail = localStorage.getItem('user_email') // Ambil email user yang sedang aktif login
 
-      // Mengirim request menggunakan Axios lengkap dengan Bearer Token dan Email pelindung
+      // Mengirim request menggunakan Axios lengkap dengan penambahan key profil_risiko
       const response = await axios.post('http://127.0.0.1:8000/api/risk-profile', {
-        usia:        parseInt(form.usia),          
+        usia:        usiaAngka,          
         pekerjaan:   form.pekerjaan,
-        penghasilan: parseFloat(form.penghasilan || 0),
-        email:       userEmail // 🟢 Disuntikkan ke body payload agar data tidak tertukar di Laravel
+        penghasilan: penghasilanAngka,
+        email:       userEmail,
+        profil_risiko: hasilKalkulasiRisiko // 🟢 DATA BARU: Dikirim agar data di Admin Panel langsung ter-update!
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -118,6 +132,7 @@ export default function RiskProfile() {
         localStorage.setItem('penghasilan', form.penghasilan)
         localStorage.setItem('user_age', form.usia)
         localStorage.setItem('user_job', form.pekerjaan)
+        localStorage.setItem('user_risk_profile', hasilKalkulasiRisiko) // Simpan juga di browser lokal
 
         setSukses(true)
         setTimeout(() => navigate('/budget-planner'), 1500)

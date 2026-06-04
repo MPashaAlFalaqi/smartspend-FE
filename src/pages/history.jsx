@@ -16,24 +16,31 @@ export default function History() {
     localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User'
   )
 
+  // Helper untuk mendapatkan tanggal awal bulan berjalan secara dinamis (e.g., "2026-06-01")
+  const getBulanSekarang = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  };
+
   // ===== STATE UTAMA =====
-  const [transaksiData, setTransaksiData] = useState([])
-  const [filterDate, setFilterDate] = useState('2026-05-01') // Menyesuaikan default ke tahun berjalan (2026)
-  const [filterMode, setFilterMode] = useState('month') // 'day' atau 'month'
-  const [filterTipe, setFilterTipe] = useState('Semua')
-  const [search, setSearch] = useState('')
+  const [transaksiData, setTransaksiData] = useState([]) // Menyimpan seluruh data bulan ini secara utuh
+  const [filterDate, setFilterDate] = useState(getBulanSekarang()) 
+  const [filterMode, setFilterMode] = useState('month') 
+  const [filterTipe, setFilterTipe] = useState('Semua') 
+  const [search, setSearch] = useState('') // Pencarian ditangani di Frontend
   const [loading, setLoading] = useState(false)
   const [showMore, setShowMore] = useState(false)
 
   // ===== STATE PICKER CUSTOM =====
   const [showPicker, setShowPicker] = useState(false)
-  const [viewMode, setViewMode] = useState('days') // 'days', 'months', 'years'
-  const [currentViewDate, setCurrentViewDate] = useState(new Date(2026, 4, 1)) // Menyesuaikan ke Mei 2026
+  const [viewMode, setViewMode] = useState('days') 
+  const [currentViewDate, setCurrentViewDate] = useState(new Date()) 
   const pickerRef = useRef(null)
 
+  // Helper formatting mata uang
   const formatRp = (val) => parseInt(val || 0).toLocaleString('id-ID')
 
-  // Helper untuk Inisial Nama (Misal: "karma" -> "KA", "Budi Santoso" -> "BS")
+  // Helper untuk Inisial Nama
   const getInisial = (nama) => {
     if (!nama) return 'U'
     const kata = nama.trim().split(' ')
@@ -45,7 +52,6 @@ export default function History() {
   const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
   const hariSingkat = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
-  // Update nama jika ada perubahan di localStorage saat komponen dimount
   useEffect(() => {
     setNamaUser(localStorage.getItem('namaUser') || localStorage.getItem('user_name') || 'User')
   }, [])
@@ -62,7 +68,8 @@ export default function History() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // AMBIL DATA DARI API
+  // AMBIL DATA DARI API 
+  // Parameter 'tipe' dan 'search' sengaja dihapus dari API request agar backend mengembalikan data utuh tanpa terpotong
   const fetchTransactions = async () => {
     setLoading(true)
     try {
@@ -70,13 +77,13 @@ export default function History() {
       const response = await axios.get('http://127.0.0.1:8000/api/transactions', {
         params: {
           tanggal: filterDate,
-          mode: filterMode,
-          tipe: filterTipe,
-          search: search
+          mode: filterMode
         },
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (response.data.success) setTransaksiData(response.data.data)
+      if (response.data.success) {
+        setTransaksiData(response.data.data)
+      }
     } catch (error) {
       console.error("Error fetching transactions:", error)
     } finally { 
@@ -84,7 +91,8 @@ export default function History() {
     }
   }
 
-  useEffect(() => { fetchTransactions() }, [filterDate, filterTipe, search, filterMode])
+  // Efek memicu request ketika tanggal atau mode kalender berubah saja
+  useEffect(() => { fetchTransactions() }, [filterDate, filterMode])
 
   // Logika Kalender
   const year = currentViewDate.getFullYear()
@@ -117,10 +125,36 @@ export default function History() {
     setShowPicker(false)
   }
 
-  const displayed = showMore ? transaksiData : transaksiData.slice(0, 6)
-  const totalPemasukan = transaksiData.filter(t => t.tipe === 'pemasukan').reduce((a, b) => a + b.jumlah, 0)
-  const totalPengeluaran = transaksiData.filter(t => t.tipe === 'pengeluaran').reduce((a, b) => a + b.jumlah, 0)
-  const selisih = totalPemasukan - totalPengeluaran
+  // ===== FILTER & PENCARIAN DI SISI FRONTEND (CLIENT-SIDE FILTERING) =====
+  // Fungsi ini menyaring data untuk visualisasi list bawah tanpa merusak state utama 'transaksiData'
+  const dataTerfilter = transaksiData.filter(t => {
+    // 1. Filter berdasarkan Tombol Tipe (Semua / Pemasukan / Pengeluaran)
+    const cocokTipe = filterTipe === 'Semua' || t.tipe.toLowerCase() === filterTipe.toLowerCase();
+    
+    // 2. Filter berdasarkan Input Pencarian Ketik Teks (Nama transaksi atau Kategori)
+    const namaTransaksi = t.nama ? t.nama.toLowerCase() : '';
+    const kategoriTransaksi = t.kategori ? t.kategori.toLowerCase() : '';
+    const kataKunci = search.toLowerCase();
+    const cocokSearch = namaTransaksi.includes(kataKunci) || kategoriTransaksi.includes(kataKunci);
+
+    return cocokTipe && cocokSearch;
+  });
+
+  const displayed = showMore ? dataTerfilter : dataTerfilter.slice(0, 6)
+
+  // ===== LOGIKA RINGKASAN DATA YANG SELALU KONSISTEN & STABIL =====
+  // Mengambil totalitas data dari 'transaksiData' sehingga kebal dari ketikan kolom pencarian maupun tombol filter.
+  const totalPemasukan = transaksiData
+    .filter(t => t.tipe === 'pemasukan')
+    .reduce((a, b) => a + Number(b.jumlah || b.nominal || 0), 0)
+
+  const pengeluaranRiil = transaksiData
+    .filter(t => t.tipe === 'pengeluaran')
+    .reduce((a, b) => a + Number(b.jumlah || b.nominal || 0), 0)
+
+  const alokasiTabungan = 500000 // Target Alokasi Tabungan
+  const totalPengeluaran = pengeluaranRiil + alokasiTabungan // Total Pengeluaran Komprehensif
+  const selisih = totalPemasukan - totalPengeluaran // Sisa Anggaran
 
   return (
     <>
@@ -283,7 +317,7 @@ export default function History() {
           {/* List Transaksi */}
           <div style={{ backgroundColor:'white', borderRadius:'16px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)', overflow:'hidden' }}>
             <div style={{ padding:'12px 20px', backgroundColor:'#F9F9F9', borderBottom:'1px solid #EEE', textAlign:'center', fontSize:'12px', color:'#9CA3AF', fontWeight:'600' }}>
-               --- {filterMode === 'month' ? 'Data Transaksi Bulanan' : 'Data Transaksi Harian'} ---
+                --- {filterMode === 'month' ? 'Data Transaksi Bulanan' : 'Data Transaksi Harian'} ---
             </div>
             
             {loading ? (
@@ -297,7 +331,7 @@ export default function History() {
                 </div>
                 <div style={{ textAlign:'right' }}>
                   <p style={{ fontSize:'15px', fontWeight:'700', color: t.tipe === 'pemasukan' ? GREEN : RED }}>
-                    {t.tipe === 'pemasukan' ? '+' : '-'} Rp {formatRp(t.jumlah)}
+                    {t.tipe === 'pemasukan' ? '+' : '-'} Rp {formatRp(t.jumlah || t.nominal)}
                   </p>
                 </div>
               </div>
@@ -308,7 +342,7 @@ export default function History() {
               </div>
             )}
 
-            {transaksiData.length > 6 && (
+            {dataTerfilter.length > 6 && (
               <div style={{ padding:'15px', textAlign:'center', borderTop:'1px solid #F8F8F8' }}>
                 <button 
                   onClick={() => setShowMore(!showMore)}

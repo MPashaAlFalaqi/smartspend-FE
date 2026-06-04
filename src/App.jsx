@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google'
-import Swal from 'sweetalert2' // <-- Ditambahkan: Mengimport SweetAlert2 untuk pop-up keren
+import Swal from 'sweetalert2' // <-- Mengimport SweetAlert2 untuk pop-up keren
+import { Toaster } from 'react-hot-toast' // <-- DITAMBAHKAN: Mengimport Toaster untuk halaman profil kamu
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import RiskProfile from './pages/RiskProfile'
@@ -394,6 +395,9 @@ export default function App() {
     <GoogleOAuthProvider clientId="666018414846-v86923a912h55a9nqlg1k3c9hkqrvmho.apps.googleusercontent.com">
       <style>{font}</style>
       <BrowserRouter>
+        {/* DITAMBAHKAN: Letakkan komponen induk Toaster di sini */}
+        <Toaster position="top-right" reverseOrder={false} toastOptions={{ duration: 3000 }} />
+        
         <AnimatedRoutes />
       </BrowserRouter>
     </GoogleOAuthProvider>

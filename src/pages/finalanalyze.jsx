@@ -18,7 +18,7 @@ export default function FinalAnalyze() {
     penghasilan: 0,
     totalPengeluaran: 0,
     tabungan: 0,
-    persen: 0,
+    percent: 0,
     namaUser: 'User',
     pesanAnalisis: 'Belum ada data analisis. Silakan atur anggaran kamu di menu Budget Planner terlebih dahulu.',
     kategori: 'konservatif'
@@ -47,7 +47,8 @@ export default function FinalAnalyze() {
     const percentage = parseInt(localStorage.getItem('analisis_persen') || '0')
     const msg = localStorage.getItem('analisis_pesan') || 'Belum ada data analisis.'
     
-    const kategoriRaw = localStorage.getItem('analisis_kategori') || 'konservatif'
+    // Cek beberapa kemungkinan key localStorage yang tersimpan agar pencocokan lebih aman
+    const kategoriRaw = localStorage.getItem('analisis_kategori') || localStorage.getItem('risk_profile') || 'konservatif'
     let finalKategori = 'konservatif'
     if (kategoriRaw.toLowerCase().includes('agresif')) finalKategori = 'agresif'
     if (kategoriRaw.toLowerCase().includes('moderat')) finalKategori = 'moderat'
@@ -69,17 +70,17 @@ export default function FinalAnalyze() {
     setFotoUser(localStorage.getItem('fotoUser') || localStorage.getItem('user_avatar') || null)
   }, [])
 
-  // ===== FUNGSI SIMPAN KE LARAVEL (SUDAH DI-REPAIR AMAN 100%) =====
+  // ===== FUNGSI SIMPAN KE LARAVEL =====
   const handleSimpanAnalisis = async () => {
     setLoadingSimpan(true)
     try {
       const token = localStorage.getItem('token')
-      const userEmail = localStorage.getItem('user_email') // Ambil email user aktif sebagai jangkar pemisah data
+      const userEmail = localStorage.getItem('user_email') 
 
       // Mengonversi string kategori menjadi format text database/admin panel yang konsisten
       let namaKategoriAdmin = 'Konservatif'
       if (analisis.kategori === 'moderat') namaKategoriAdmin = 'Moderat'
-      if (analisis.kategori === 'agresif') namaKategoriAdmin = 'Agresif' // 🟢 Diubah ke 'Agresif' agar singkron dengan DB admin
+      if (analisis.kategori === 'agresif') namaKategoriAdmin = 'Agresif' 
 
       const dataKirim = {
         total_pemasukan: analisis.penghasilan,
@@ -87,7 +88,7 @@ export default function FinalAnalyze() {
         budget_keinginan: Math.round(analisis.totalPengeluaran * 0.3),
         budget_tabungan: analisis.tabungan,
         risk_profile: namaKategoriAdmin,
-        email: userEmail // 🟢 Menyuntikkan email user aktif agar data Tiara & Sohe tidak tertukar di Backend!
+        email: userEmail 
       }
 
       const response = await axios.post('http://127.0.0.1:8000/api/final-analyze/save', dataKirim, {
@@ -99,6 +100,14 @@ export default function FinalAnalyze() {
       })
 
       if (response.data.success) {
+        // ==========================================================
+        // KUNCI UTAMA SINKRONISASI:
+        // Set data profil risiko terbaru ke localStorage sebelum pindah halaman,
+        // supaya Dashboard langsung membacanya tanpa delay data lama.
+        // ==========================================================
+        localStorage.setItem('profilRisiko', namaKategoriAdmin)
+        localStorage.setItem('risk_profile', namaKategoriAdmin)
+
         Swal.fire({
           title: 'Analisis Tersimpan!',
           text: 'Data analisis keuanganmu berhasil disimpan ke sistem dengan aman.',
@@ -213,7 +222,7 @@ export default function FinalAnalyze() {
       <div style={{ minHeight: '100vh', backgroundColor: CREAM }}>
 
         {/* ===== NAVBAR ===== */}
-        <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyConten: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <nav style={{ backgroundColor: MAROON, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', position: 'sticky', top: 0, zIndex: 100 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill={GOLD}>
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
