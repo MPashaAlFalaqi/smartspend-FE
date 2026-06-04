@@ -30,13 +30,11 @@ export default function AdminReports() {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
   }
 
-  // 🟢 FIXED: Mengubah validasi agar langsung menerima payload objek murni dari Laravel
   const fetchReportData = async () => {
     try {
       setLoading(true)
       const response = await axios.get('http://localhost:8000/api/admin/dashboard-data', authHeader)
       
-      // Jika response data dari Laravel berhasil ditangkap (tidak kosong/null)
       if (response.data) {
         setDataStats(response.data)
       }
@@ -111,7 +109,8 @@ export default function AdminReports() {
           </div>
           <div style={{ display:'flex', gap:'4px' }}>
             <span onClick={() => navigate('/admin-dashboard')} className="nav-link">Dashboard</span>
-            <span onClick={() => navigate('/admin-manage')} className="nav-link">Manage Users</span>
+            {/* 🟢 FIXED: Path di bawah ini diubah dari /admin-manage menjadi /admin-manage-users */}
+            <span onClick={() => navigate('/admin-manage-users')} className="nav-link">Manage Users</span>
             <span style={{ backgroundColor:GOLD, color:MAROON, fontWeight:'600', fontSize:'14px', padding:'6px 16px', borderRadius:'20px' }}>Reports</span>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>

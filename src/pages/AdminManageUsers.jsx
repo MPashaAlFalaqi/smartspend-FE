@@ -23,7 +23,7 @@ export default function AdminManageUsers() {
   const [modalMode, setModalMode] = useState('add') 
   
   // State Form Input
-  const [formValues, setFormValues] = useState({ nama: '', email: '', password: '', status: 'aktif' })
+  const [formValues, setFormValues] = useState({ nama: '', username: '', email: '', password: '', status: 'aktif' })
 
   // Config Axios Header Token
   const authHeader = {
@@ -35,9 +35,18 @@ export default function AdminManageUsers() {
     setLoading(true)
     try {
       const res = await axios.get(`http://localhost:8000/api/admin/users?search=${search}`, authHeader)
-      setDataList(res.data.data || res.data)
+      
+      // Amankan format pembacaan jika backend melempar data berbentuk array murni atau object laravel pagination
+      if (Array.isArray(res.data)) {
+        setDataList(res.data)
+      } else if (res.data && Array.isArray(res.data.data)) {
+        setDataList(res.data.data)
+      } else {
+        setDataList([])
+      }
     } catch (err) {
-      console.error("Gagal mengambil data:", err)
+      console.error("Gagal mengambil data database:", err)
+      setDataList([])
     } finally {
       setLoading(false)
     }
@@ -45,19 +54,31 @@ export default function AdminManageUsers() {
 
   useEffect(() => {
     fetchData()
+
+    const handleWindowFocus = () => {
+      fetchData()
+    }
+    window.addEventListener('focus', handleWindowFocus)
+    return () => window.removeEventListener('focus', handleWindowFocus)
   }, [search])
 
   // 🟢 2. LOGIKA TRIGGER MODAL
   const handleAdd = () => {
     setModalMode('add')
-    setFormValues({ nama: '', email: '', password: '', status: 'aktif' })
+    setFormValues({ nama: '', username: '', email: '', password: '', status: 'aktif' })
     setShowModal(true)
   }
 
   const handleEdit = (item) => {
     setModalMode('edit')
     setSelectedItem(item)
-    setFormValues({ nama: item.nama, email: item.email, password: '', status: item.status || 'aktif' })
+    setFormValues({ 
+      nama: item.nama || '', 
+      username: item.username || '',
+      email: item.email || '', 
+      password: '', 
+      status: item.status || 'aktif' 
+    })
     setShowModal(true)
   }
 
@@ -100,6 +121,25 @@ export default function AdminManageUsers() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  // 🟢 6. LOGIKA STYLE WARNA PROFIL RISIKO
+  const getRiskBadgeStyles = (riskString) => {
+    if (!riskString) return { bg: '#F3F4F6', color: '#6B7280', label: 'Belum Mengisi' };
+    
+    const r = riskString.toLowerCase().trim();
+    
+    if (r === 'konservatif' || r === 'conservative') {
+      return { bg: '#E8F5E9', color: GREEN, label: 'Konservatif' };
+    }
+    if (r === 'moderat' || r === 'moderate') {
+      return { bg: '#FFF3E0', color: '#D97706', label: 'Moderat' }; 
+    }
+    if (r === 'agresif' || r === 'aggressive') {
+      return { bg: '#FFEBEE', color: RED, label: 'Agresif' };
+    }
+    
+    return { bg: '#F3F4F6', color: '#6B7280', label: riskString };
   }
 
   return (
@@ -157,7 +197,7 @@ export default function AdminManageUsers() {
                 <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', fontSize:'16px' }}>🔍</span>
                 <input placeholder="Cari nama atau email user..."
                   value={search} onChange={e => setSearch(e.target.value)}
-                  style={{ width:'100%', height:'44px', padding:'0 16px 0 42px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA' }}/>
+                  style={{ width:'100%', height:'44px', padding:'0 16px 0 42px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A' }}/>
               </div>
               <button onClick={handleAdd}
                 style={{ height:'44px', padding:'0 20px', backgroundColor:MAROON, color:'white', border:'none', borderRadius:'10px', fontSize:'14px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap' }}>
@@ -165,7 +205,7 @@ export default function AdminManageUsers() {
               </button>
             </div>
 
-            {/* Table dengan Perataan Kolom Tegak Lurus Sempurna */}
+            {/* Table */}
             <div style={{ width: '100%', overflowX: 'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', tableLayout: 'fixed' }}>
                 <thead>
@@ -183,36 +223,56 @@ export default function AdminManageUsers() {
                     <tr><td colSpan="6" style={{ textAlign:'center', padding:'32px', color:'#9CA3AF' }}>Sedang mengambil data database...</td></tr>
                   ) : dataList.length === 0 ? (
                     <tr><td colSpan="6" style={{ textAlign:'center', padding:'32px', color:'#9CA3AF' }}>Tidak ada data ditemukan.</td></tr>
-                  ) : dataList.map((item, i) => (
-                    <tr key={item.id} style={{ borderBottom:'1px solid #F3F4F6' }}>
-                      <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'14px', color:'#9CA3AF', fontWeight:'600', verticalAlign:'middle' }}>
-                        {String(i + 1).padStart(2, '0')}
-                      </td>
-                      <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'14px', fontWeight:'700', color:'#1A1A1A', verticalAlign:'middle', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {item.nama}
-                      </td>
-                      <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'13px', color:'#6B7280', verticalAlign:'middle', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {item.email}
-                      </td>
-                      <td style={{ padding:'16px 20px', textAlign:'left', verticalAlign:'middle' }}>
-                        <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', backgroundColor: item.status==='aktif' || item.status==='Aktif' ? '#E8F5E9' : '#FFEBEE', color: item.status==='aktif' || item.status==='Aktif' ? GREEN : RED, fontSize:'12px', fontWeight:'600', padding:'6px 14px', borderRadius:'20px', whiteSpace:'nowrap' }}>
-                          {item.status==='aktif' || item.status==='Aktif' ? '✓ Aktif' : '✗ Nonaktif'}
-                        </span>
-                      </td>
-                      <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'13px', color: item.risk_profile ? MAROON : '#9CA3AF', fontWeight: item.risk_profile ? '600' : '400', verticalAlign:'middle' }}>
-                        {item.risk_profile ? item.risk_profile.kategori_risiko : 'Belum Mengisi'}
-                      </td>
-                      <td style={{ padding:'16px 20px', textAlign:'left', verticalAlign:'middle' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                          <button onClick={() => handleEdit(item)} title="Edit Pengguna" style={{ width:'34px', height:'34px', backgroundColor:'#FFF3E0', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>✏️</button>
-                          <button onClick={() => handleToggleStatus(item.id)} title={item.status==='aktif' || item.status==='Aktif' ? "Ban Pengguna" : "Aktifkan Pengguna"} style={{ width:'34px', height:'34px', backgroundColor: item.status==='aktif' || item.status==='Aktif' ? '#FFEBEE' : '#E8F5E9', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>
-                            {item.status==='aktif' || item.status==='Aktif' ? '🚫' : '✅'}
-                          </button>
-                          <button onClick={() => handleDelete(item)} title="Hapus Pengguna" style={{ width:'34px', height:'34px', backgroundColor:'#FFEBEE', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  ) : dataList.map((item, i) => {
+                    
+                    // Membaca object data baru risk_profile dari AdminController
+                    const currentRisk = item?.risk_profile?.kategori_risiko || 'Belum Mengisi';
+                    const badge = getRiskBadgeStyles(currentRisk);
+                    
+                    return (
+                      <tr key={item.id || i} style={{ borderBottom:'1px solid #F3F4F6' }}>
+                        <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'14px', color:'#9CA3AF', fontWeight:'600', verticalAlign:'middle' }}>
+                          {String(i + 1).padStart(2, '0')}
+                        </td>
+                        <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'14px', fontWeight:'700', color:'#1A1A1A', verticalAlign:'middle', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {item.nama}
+                        </td>
+                        <td style={{ padding:'16px 20px', textAlign:'left', fontSize:'13px', color:'#6B7280', verticalAlign:'middle', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {item.email}
+                        </td>
+                        <td style={{ padding:'16px 20px', textAlign:'left', verticalAlign:'middle' }}>
+                          <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', backgroundColor: item.status==='aktif' || item.status==='Aktif' ? '#E8F5E9' : '#FFEBEE', color: item.status==='aktif' || item.status==='Aktif' ? GREEN : RED, fontSize:'12px', fontWeight:'600', padding:'6px 14px', borderRadius:'20px', whiteSpace:'nowrap' }}>
+                            {item.status==='aktif' || item.status==='Aktif' ? '✓ Aktif' : '✗ Nonaktif'}
+                          </span>
+                        </td>
+                        <td style={{ padding:'16px 20px', textAlign:'left', verticalAlign:'middle' }}>
+                          <span style={{ 
+                            display:'inline-flex', 
+                            alignItems:'center', 
+                            justifyContent:'center', 
+                            backgroundColor: badge.bg, 
+                            color: badge.color, 
+                            fontSize:'12px', 
+                            fontWeight:'700', 
+                            padding:'6px 14px', 
+                            borderRadius:'20px', 
+                            whiteSpace:'nowrap'
+                          }}>
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td style={{ padding:'16px 20px', textAlign:'left', verticalAlign:'middle' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                            <button onClick={() => handleEdit(item)} title="Edit Pengguna" style={{ width:'34px', height:'34px', backgroundColor:'#FFF3E0', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>✏️</button>
+                            <button onClick={() => handleToggleStatus(item.id)} title={item.status==='aktif' || item.status==='Aktif' ? "Ban Pengguna" : "Aktifkan Pengguna"} style={{ width:'34px', height:'34px', backgroundColor: item.status==='aktif' || item.status==='Aktif' ? '#FFEBEE' : '#E8F5E9', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>
+                              {item.status==='aktif' || item.status==='Aktif' ? '🚫' : '✅'}
+                            </button>
+                            <button onClick={() => handleDelete(item)} title="Hapus Pengguna" style={{ width:'34px', height:'34px', backgroundColor:'#FFEBEE', border:'none', borderRadius:'8px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -230,18 +290,27 @@ export default function AdminManageUsers() {
             
             <div style={{ marginBottom:'16px' }}>
               <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'6px', color:'#374151' }}>Nama Lengkap</label>
-              <input type="text" value={formValues.nama} onChange={e => setFormValues({...formValues, nama:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA' }}/>
+              {/* 🟢 FIXED: Ditambahkan color: '#1A1A1A' agar teks input berwarna gelap */}
+              <input type="text" value={formValues.nama} onChange={e => setFormValues({...formValues, nama:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A' }}/>
+            </div>
+
+            <div style={{ marginBottom:'16px' }}>
+              <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'6px', color:'#374151' }}>Username</label>
+              {/* 🟢 FIXED: Ditambahkan color: '#1A1A1A' agar teks input berwarna gelap */}
+              <input type="text" value={formValues.username} onChange={e => setFormValues({...formValues, username:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A' }}/>
             </div>
 
             <div style={{ marginBottom:'16px' }}>
               <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'6px', color:'#374151' }}>Email</label>
-              <input type="email" value={formValues.email} onChange={e => setFormValues({...formValues, email:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA' }}/>
+              {/* 🟢 FIXED: Ditambahkan color: '#1A1A1A' agar teks input berwarna gelap */}
+              <input type="email" value={formValues.email} onChange={e => setFormValues({...formValues, email:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A' }}/>
             </div>
 
             {modalMode === 'add' && (
               <div style={{ marginBottom:'16px' }}>
                 <label style={{ fontSize:'13px', fontWeight:'600', display:'block', marginBottom:'6px', color:'#374151' }}>Password</label>
-                <input type="password" placeholder="Minimal 8 karakter" value={formValues.password} onChange={e => setFormValues({...formValues, password:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA' }}/>
+                {/* 🟢 FIXED: Ditambahkan color: '#1A1A1A' agar teks input berwarna gelap */}
+                <input type="password" placeholder="Minimal 8 karakter" value={formValues.password} onChange={e => setFormValues({...formValues, password:e.target.value})} style={{ width:'100%', height:'46px', padding:'0 14px', border:'1.5px solid #E5E7EB', borderRadius:'10px', fontSize:'14px', boxSizing:'border-box', backgroundColor:'#FAFAFA', color:'#1A1A1A' }}/>
               </div>
             )}
 
