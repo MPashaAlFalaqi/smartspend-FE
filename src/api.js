@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://smartspend-api.infinityfreeapp.com/api',
+  baseURL: 'http://smartspend-be.infinityfreeapp.com/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
