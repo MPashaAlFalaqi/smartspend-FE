@@ -202,7 +202,7 @@ export default function BudgetPlanner() {
       const targetTahun = new Date().getFullYear()
 
       // TEPAT DI SINI: Endpoint URL ditambahkan rute rincian '/api/budget-planners'
-      const response = await fetch('https://smartspend-be-production.up.railway.app/api/budget-planners', {
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/budget-planner', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
