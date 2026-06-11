@@ -140,8 +140,8 @@ export default function Register() {
         didOpen: () => { Swal.showLoading() }
       })
 
-      // ===== UPDATE BODY REQ: Kirim username dan no_hp ke Laravel Backend =====
-      const response = await fetch('https://smartspend-be-production.up.railway.app/api/auth/google', {
+      // ===== SAKTI: Diubah mengarah ke /api/register (Bukan auth/google lagi) =====
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
