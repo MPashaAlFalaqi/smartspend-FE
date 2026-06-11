@@ -8,6 +8,9 @@ const CREAM = '#F5F0E8'
 const GREEN = '#2D6A4F'
 const RED = '#C0392B'
 
+// 🌍 URL Server Production Railway Kamu
+const API_BASE_URL = 'https://smartspend-be-production.up.railway.app/api'
+
 export default function RiskProfile() {
   const navigate = useNavigate()
   
@@ -29,12 +32,36 @@ export default function RiskProfile() {
   const [sukses, setSukses] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Otomatis isi field nama saat komponen di-load
+  // 🟢 AMBIL DATA RISK PROFILE DARI RAILWAY SAAT HALAMAN DI-LOAD
   useEffect(() => {
-    setForm(prevForm => ({
-      ...prevForm,
-      nama: namaUser
-    }))
+    const fetchRiskProfile = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/risk-profile`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (response.data) {
+          setForm({
+            nama: namaUser,
+            usia: response.data.usia || '',
+            pekerjaan: response.data.pekerjaan || '',
+            penghasilan: response.data.penghasilan || ''
+          })
+        }
+      } catch (err) {
+        console.error('Gagal memuat profil risiko dari server:', err)
+        // Tetap isi nama dari localStorage jika get gagal
+        setForm(prev => ({ ...prev, nama: namaUser }))
+      }
+    }
+
+    fetchRiskProfile()
   }, [namaUser])
 
   // Mengambil inisial nama jika foto tidak tersedia
@@ -76,7 +103,7 @@ export default function RiskProfile() {
   }
 
   // ==========================================
-  // PROSES SUBMIT (SUDAH DI-FIX AGAR SINKRON KE ADMIN)
+  // PROSES SUBMIT (SUDAH DI-FIX KE URL RAILWAY)
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -98,26 +125,25 @@ export default function RiskProfile() {
     setError('')
 
     // 🟢 LOGIKA KALKULASI HASIL PROFIL RISIKO OTOMATIS
-    // Menentukan status risiko berdasarkan kombinasi usia produktif dan kemampuan finansial
     let hasilKalkulasiRisiko = 'Moderat' 
 
     if (usiaAngka < 30 && penghasilanAngka > 10000000) {
-      hasilKalkulasiRisiko = 'Agresif' // Usia muda & pendapatan tinggi cenderung berani mengambil risiko tinggi
+      hasilKalkulasiRisiko = 'Agresif'
     } else if (usiaAngka > 50 || penghasilanAngka < 4000000) {
-      hasilKalkulasiRisiko = 'Konservatif' // Usia senja atau pendapatan terbatas cenderung cari aman
+      hasilKalkulasiRisiko = 'Konservatif'
     }
 
     try {
       const token = localStorage.getItem('token')
-      const userEmail = localStorage.getItem('user_email') // Ambil email user yang sedang aktif login
+      const userEmail = localStorage.getItem('user_email')
 
-      // Mengirim request menggunakan Axios lengkap dengan penambahan key profil_risiko
-      const response = await axios.post('http://127.0.0.1:8000/api/risk-profile', {
-        usia:        usiaAngka,          
+      // 🌍 URL SUDAH DIUBAH KE API_BASE_URL (RAILWAY)
+      const response = await axios.post(`${API_BASE_URL}/risk-profile`, {
+        usia:         usiaAngka,          
         pekerjaan:   form.pekerjaan,
         penghasilan: penghasilanAngka,
         email:       userEmail,
-        profil_risiko: hasilKalkulasiRisiko // 🟢 DATA BARU: Dikirim agar data di Admin Panel langsung ter-update!
+        profil_risiko: hasilKalkulasiRisiko
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -126,13 +152,12 @@ export default function RiskProfile() {
         }
       })
 
-      // Jika Axios sukses mengirim data (status 200 atau 201)
       if (response.status === 200 || response.status === 201) {
-        // Simpan data cadangan ke localStorage untuk kebutuhan halaman Budget Planner / Final Analyze
+        // Simpan data cadangan ke localStorage
         localStorage.setItem('penghasilan', form.penghasilan)
         localStorage.setItem('user_age', form.usia)
         localStorage.setItem('user_job', form.pekerjaan)
-        localStorage.setItem('user_risk_profile', hasilKalkulasiRisiko) // Simpan juga di browser lokal
+        localStorage.setItem('user_risk_profile', hasilKalkulasiRisiko)
 
         setSukses(true)
         setTimeout(() => navigate('/budget-planner'), 1500)
@@ -142,7 +167,7 @@ export default function RiskProfile() {
 
     } catch (err) {
       console.error(err)
-      setError(err.response?.data?.error || 'Gagal terhubung ke server!')
+      setError(err.response?.data?.error || err.response?.data?.message || 'Gagal terhubung ke server!')
     } finally {
       setLoading(false)
     }
