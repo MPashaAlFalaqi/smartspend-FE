@@ -42,8 +42,8 @@ function Login() {
       try {
         setError('')
         
-        // 1. Kirim access_token dari pop-up Google ke Backend Laravel
-        const response = await fetch('http://127.0.0.1:8000/api/auth/google', {
+        // 1. FIXED: Mengubah URL ke Backend Production Railway
+        const response = await fetch('https://smartspend-be-production.up.railway.app/api/auth/google', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ function Login() {
           setError(data.message || 'Gagal sinkronisasi akun dengan sistem SmartSpend.')
         }
       } catch (error) {
-        setError('Koneksi ke backend Laravel terputus. Pastikan server laravel menyala!')
+        setError('Koneksi ke backend SmartSpend cloud terputus.')
       }
     },
     onError: () => setError('Gagal melakukan autentikasi lewat popup Google.'),
@@ -113,7 +113,8 @@ function Login() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login', {
+      // FIXED: Mengubah URL login manual ke Production Cloud Railway
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +143,7 @@ function Login() {
       }
 
     } catch (error) {
-      setError('Gagal terhubung ke server. Pastikan backend jalan!')
+      setError('Gagal terhubung ke server pusat SmartSpend. Silakan periksa jaringan Anda!')
     }
   }
 
