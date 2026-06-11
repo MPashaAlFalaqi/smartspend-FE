@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true)
-      const res = await axios.get(`http://localhost:8000/api/admin/dashboard?t=${new Date().getTime()}`, {
+      const res = await axios.get(`https://smartspend-be-production.up.railway.app/api/admin/dashboard?t=${new Date().getTime()}`, {
         headers: { 
           'Accept': 'application/json',
           'Authorization': '' 
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('token')
       
       if (token) {
-        await axios.post('http://localhost:8000/api/logout', {}, {
+        await axios.post('https://smartspend-be-production.up.railway.app/api/logout', {}, {
           headers: { 
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}` 

@@ -23,7 +23,7 @@ export default function ForgotPassword() {
       setLoading(true)
 
       // 1. Kirim data email ke API Laravel
-      const response = await fetch('http://127.0.0.1:8000/api/password/email', {
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/password/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

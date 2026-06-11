@@ -33,7 +33,7 @@ export default function AdminReports() {
   const fetchReportData = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('http://localhost:8000/api/admin/dashboard-data', authHeader)
+      const response = await axios.get('https://smartspend-be-production.up.railway.app/api/admin/dashboard-data', authHeader)
       
       if (response.data) {
         setDataStats(response.data)

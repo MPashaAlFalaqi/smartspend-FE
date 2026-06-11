@@ -88,7 +88,7 @@ export default function Dashboard() {
 
         // 1. Ambil data User profil dari endpoint /api/me
         try {
-          const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
+          const userRes = await axios.get('https://smartspend-be-production.up.railway.app/api/me', {
             headers: { Authorization: `Bearer ${token}` }
           })
 
@@ -124,7 +124,7 @@ export default function Dashboard() {
 
         // 2. Ambil data Akumulasi Keuangan dari endpoint /api/dashboard-summary
         try {
-          const summaryRes = await axios.get('http://127.0.0.1:8000/api/dashboard-summary', {
+          const summaryRes = await axios.get('https://smartspend-be-production.up.railway.app/api/dashboard-summary', {
             headers: { Authorization: `Bearer ${token}` }
           })
           

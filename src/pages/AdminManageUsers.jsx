@@ -34,7 +34,7 @@ export default function AdminManageUsers() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await axios.get(`http://localhost:8000/api/admin/users?search=${search}`, authHeader)
+      const res = await axios.get(`https://smartspend-be-production.up.railway.app/api/admin/users?search=${search}`, authHeader)
       
       // Amankan format pembacaan jika backend melempar data berbentuk array murni atau object laravel pagination
       if (Array.isArray(res.data)) {
@@ -91,9 +91,9 @@ export default function AdminManageUsers() {
   const handleSave = async () => {
     try {
       if (modalMode === 'add') {
-        await axios.post('http://localhost:8000/api/admin/users', formValues, authHeader)
+        await axios.post('https://smartspend-be-production.up.railway.app/api/admin/users', formValues, authHeader)
       } else {
-        await axios.put(`http://localhost:8000/api/admin/users/${selectedItem.id}`, formValues, authHeader)
+        await axios.put(`https://smartspend-be-production.up.railway.app/api/admin/users/${selectedItem.id}`, formValues, authHeader)
       }
       setShowModal(false)
       fetchData()
@@ -105,7 +105,7 @@ export default function AdminManageUsers() {
   // 🟢 4. EKSEKUSI HAPUS DATA (DELETE)
   const handleConfirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:8000/api/admin/users/${selectedItem.id}`, authHeader)
+      await axios.delete(`https://smartspend-be-production.up.railway.app/api/admin/users/${selectedItem.id}`, authHeader)
       setShowDeleteModal(false)
       fetchData()
     } catch (err) {
@@ -116,7 +116,7 @@ export default function AdminManageUsers() {
   // 🟢 5. EKSEKUSI TOMBOL TOGGLE STATUS
   const handleToggleStatus = async (id) => {
     try {
-      await axios.patch(`http://localhost:8000/api/admin/users/${id}/toggle`, {}, authHeader)
+      await axios.patch(`https://smartspend-be-production.up.railway.app/api/admin/users/${id}/toggle`, {}, authHeader)
       fetchData()
     } catch (err) {
       console.error(err)

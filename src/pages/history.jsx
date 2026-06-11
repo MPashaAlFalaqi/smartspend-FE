@@ -74,7 +74,7 @@ export default function History() {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get('http://127.0.0.1:8000/api/transactions', {
+      const response = await axios.get('https://smartspend-be-production.up.railway.app/api/transactions', {
         params: {
           tanggal: filterDate,
           mode: filterMode

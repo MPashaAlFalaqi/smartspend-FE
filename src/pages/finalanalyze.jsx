@@ -91,7 +91,7 @@ export default function FinalAnalyze() {
         email: userEmail 
       }
 
-      const response = await axios.post('http://127.0.0.1:8000/api/final-analyze/save', dataKirim, {
+      const response = await axios.post('https://smartspend-be-production.up.railway.app/api/final-analyze/save', dataKirim, {
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json',

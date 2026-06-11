@@ -70,7 +70,7 @@ export default function UserProfile() {
         if (!token) return
 
         // Panggil endpoint backend Laravel untuk hapus foto
-        await axios.post('http://127.0.0.1:8000/api/user/delete-photo', {}, {
+        await axios.post('https://smartspend-be-production.up.railway.app/api/user/delete-photo', {}, {
           headers: { Authorization: `Bearer ${token}` }
         })
 
@@ -98,7 +98,7 @@ export default function UserProfile() {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const userRes = await axios.get('http://127.0.0.1:8000/api/me', {
+        const userRes = await axios.get('https://smartspend-be-production.up.railway.app/api/me', {
           headers: { Authorization: `Bearer ${token}` }
         })
 
@@ -177,7 +177,7 @@ export default function UserProfile() {
         avatar: avatar 
       }
 
-      await axios.put('http://127.0.0.1:8000/api/user/update', payload, {
+      await axios.put('https://smartspend-be-production.up.railway.app/api/user/update', payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
       
@@ -215,7 +215,7 @@ export default function UserProfile() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      await axios.put('http://127.0.0.1:8000/api/user/update-password', {
+      await axios.put('https://smartspend-be-production.up.railway.app/api/user/update-password', {
         email: securityForm.emailBaru,
         no_hp: securityForm.noHpBaru,
         password_lama: securityForm.passwordLama,

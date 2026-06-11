@@ -93,7 +93,7 @@ export default function BudgetPlanner() {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('http://127.0.0.1:8000/api/risk-profile', {
+        const response = await fetch('https://smartspend-be-production.up.railway.app', {
           headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -120,7 +120,7 @@ export default function BudgetPlanner() {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('http://127.0.0.1:8000/api/budget-planner', {
+        const response = await fetch('https://smartspend-be-production.up.railway.app', {
           headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -231,7 +231,7 @@ export default function BudgetPlanner() {
       const targetTahun = new Date().getFullYear()
 
       // Amankan pengiriman dengan menyertakan kategori_risiko & pesan_analisis ke Laravel
-      const response = await fetch('http://127.0.0.1:8000/api/budget-planner', {
+      const response = await fetch('https://smartspend-be-production.up.railway.app', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
