@@ -38,7 +38,7 @@ export default function Register() {
           }
         })
 
-        const response = await fetch('http://127.0.0.1:8000/api/auth/google', {
+        const response = await fetch('https://smartspend-be-production.up.railway.app/api/auth/google', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ export default function Register() {
       })
 
       // ===== UPDATE BODY REQ: Kirim username dan no_hp ke Laravel Backend =====
-      const response = await fetch('http://127.0.0.1:8000/api/register', {
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/auth/google', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
