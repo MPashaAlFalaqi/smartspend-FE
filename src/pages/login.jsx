@@ -29,7 +29,7 @@ export default function Login() {
         })
 
         // Mengirim Access Token dari Google menuju backend Laravel
-        const response = await fetch('http://127.0.0.1:8000/api/auth/google', {
+        const response = await fetch('https://smartspend-be-production.up.railway.app/api/auth/google', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -45,14 +45,15 @@ export default function Login() {
         if (response.ok) {
           // Menyimpan data autentikasi dari Laravel ke LocalStorage
           localStorage.setItem('token', data.token)
-          localStorage.setItem('namaUser', data.user.nama)
+          localStorage.setItem('user_name', data.user.nama || data.user.name)
+          localStorage.setItem('user_email', data.user.email)
           localStorage.setItem('role', 'user') 
           
           // Pop-up Sukses dengan Animasi Keren & Warna Custom Marun
           Swal.fire({
             icon: 'success',
             title: 'Login Berhasil!',
-            text: `Selamat datang kembali, ${data.user.nama}!`,
+            text: `Selamat datang kembali, ${data.user.nama || data.user.name}!`,
             showConfirmButton: false,
             timer: 2000,
             timerProgressBar: true,
@@ -100,7 +101,8 @@ export default function Login() {
     })
   }
 
-  const handleLogin = (e) => {
+  // ===== PERBAIKAN: LOGIKA LOGIN MANUAL TERINTEGRASI BACKEND CLOUD =====
+  const handleLogin = async (e) => {
     e.preventDefault()
 
     if (!formData.email || !formData.password) {
@@ -108,8 +110,70 @@ export default function Login() {
       return
     }
 
-    console.log('Login dengan:', formData)
-    navigate('/dashboard')
+    try {
+      setError('')
+      
+      // Spinner Loading sewaktu verifikasi akun manual
+      Swal.fire({
+        title: 'Memverifikasi Akun...',
+        text: 'Sedang mencocokkan kredensial Anda',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading()
+        }
+      })
+
+      // Menembak langsung ke endpoint Laravel asli di Railway
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        // Simpan token token JWT dan informasi pengguna esensial
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user_name', data.user.nama || data.user.name)
+        localStorage.setItem('user_email', data.user.email)
+        localStorage.setItem('role', 'user')
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Masuk Berhasil!',
+          text: `Selamat datang kembali di SmartSpend!`,
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+          iconColor: '#6B0F1A'
+        })
+
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 2000)
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Masuk',
+          text: data.message || 'Email atau password yang Anda masukkan salah.',
+          confirmButtonColor: '#6B0F1A'
+        })
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Masalah Koneksi',
+        text: 'Gagal menghubungi server pusat SmartSpend.',
+        confirmButtonColor: '#6B0F1A'
+      })
+    }
   }
 
   return (
@@ -228,7 +292,7 @@ const styles = {
     backgroundColor: '#6B0F1A',
     display: 'flex',
     alignItems: 'center',
-    justify: 'center',
+    justifyContent: 'center',
     fontFamily: 'Inter, sans-serif',
   },
   card: {
@@ -375,7 +439,7 @@ const styles = {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    justify: 'center',
+    justifyContent: 'center',
     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
   },
   registerText: {
