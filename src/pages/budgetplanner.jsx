@@ -102,7 +102,6 @@ export default function BudgetPlanner() {
         const data = await response.json()
 
         if (response.ok && data) {
-          // Cek data budget tersimpan dulu, jika tidak ada fallback ke pendapatan risk profile
           const nominalPemasukan = data.pemasukan || data.pendapatan || 0
           setPemasukan(parseInt(nominalPemasukan))
         }
@@ -168,15 +167,13 @@ export default function BudgetPlanner() {
     }))
   }
 
-  // 3. PROSES SIMPAN KE LARAVEL & LOCALSTORAGE DENGAN LOGIKA TERBARU
+  // PROSES SIMPAN KE BACKEND & LOCALSTORAGE (SUDAH DIPERBAIKI RUTE ENDPOINT-NYA)
   const handleSimpan = async () => {
     const pemasukanInt = parseInt(pemasukan || 0)
-     
-    // Hitung total pengeluaran konsumtif (Pokok + Keinginan) untuk rasio risiko keuangan
+      
     const totalKonsumtif = totalPokok + totalKeinginan
     const persenTerpakai = pemasukanInt > 0 ? Math.round((totalKonsumtif / pemasukanInt) * 100) : 0
 
-    // ===== ANALISIS KATEGORI RISIKO (Disinkronkan dengan ENUM Database & FinalAnalyze) =====
     let kategoriRisiko = 'konservatif'
     let pesanAnalisis = ''
 
@@ -192,7 +189,6 @@ export default function BudgetPlanner() {
       pesanAnalisis = `Kondisi Keuangan Sangat Sehat! Pengeluaran pokok terkontrol baik, dengan alokasi tabungan & investasi menembus ${persenTabunganHitung}% dari pendapatan. Pertahankan!`
     }
 
-    // Tetap simpan pecahan data lama ke localStorage untuk kompatibilitas lemparan data halaman depan
     localStorage.setItem('analisis_pemasukan', pemasukanInt.toString())
     localStorage.setItem('analisis_pengeluaran', totalPengeluaran.toString())
     localStorage.setItem('analisis_tabungan', totalTabungan.toString())
@@ -205,8 +201,8 @@ export default function BudgetPlanner() {
       const targetBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"][new Date().getMonth()]
       const targetTahun = new Date().getFullYear()
 
-      // Amankan pengiriman dengan menyertakan kategori_risiko & pesan_analisis ke Laravel
-      const response = await fetch('https://smartspend-be-production.up.railway.app', {
+      // TEPAT DI SINI: Endpoint URL ditambahkan rute rincian '/api/budget-planners'
+      const response = await fetch('https://smartspend-be-production.up.railway.app/api/budget-planners', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +218,6 @@ export default function BudgetPlanner() {
           tahun: targetTahun,
           kategori_risiko: kategoriRisiko,
           pesan_analisis: pesanAnalisis,
-          // === Detail list item agar masuk ke History ===
           detail_pokok: kategori.pokok,
           detail_keinginan: kategori.keinginan,
           detail_tabungan: kategori.tabungan
@@ -268,6 +263,10 @@ export default function BudgetPlanner() {
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
         input:focus { border-color:${MAROON} !important; outline:none; background:white !important; box-shadow: 0 0 0 3px rgba(107,15,26,0.1); }
         
+        @define-placeholder modalPop {
+          0% { transform: scale(0.92); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
         @keyframes modalPop {
           0% { transform: scale(0.92); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
@@ -306,7 +305,6 @@ export default function BudgetPlanner() {
             <Link to="/final-analyze" className="nav-link">Final Analyze</Link>
           </div>
 
-          {/* BLOCK NAV USER AVATAR */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ 
               width: '36px', 
