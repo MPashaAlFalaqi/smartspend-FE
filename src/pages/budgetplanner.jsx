@@ -93,7 +93,7 @@ export default function BudgetPlanner() {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('https://smartspend-be-production.up.railway.app', {
+        const response = await fetch('https://smartspend-be-production.up.railway.app/api/risk-profile', {
           headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${token}`,
