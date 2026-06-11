@@ -1,18 +1,18 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
-import Swal from 'sweetalert2' // <-- 1. Import SweetAlert2
+import Swal from 'sweetalert2' 
 
 export default function Register() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   
-  // State untuk mengontrol tampilan pop-up modal S&K / Privasi bawaan
+  // State untuk modal S&K / Privasi
   const [showSK, setShowSK] = useState(false)
   const [showPrivasi, setShowPrivasi] = useState(false)
 
-  // ===== UPDATE STATE: Tambah username dan no_hp =====
+  // State Form Data
   const [formData, setFormData] = useState({
     nama: '', 
     username: '', 
@@ -24,11 +24,10 @@ export default function Register() {
   })
   const [passwordStrength, setPasswordStrength] = useState(0)
 
-  // ===== 2. LOGIKA REGISTER VIA GOOGLE + SWEETALERT2 =====
+  // ===== 1. LOGIKA REGISTER VIA GOOGLE =====
   const handleGoogleRegister = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        // Tampilkan loading spinner halus saat menghubungi server
         Swal.fire({
           title: 'Menghubungkan Akun...',
           text: 'Mohon tunggu sebentar',
@@ -52,14 +51,12 @@ export default function Register() {
         const data = await response.json()
 
         if (response.ok) {
-          // DISINKRONKAN: Menyimpan info esensial ke localStorage agar dibaca oleh UserProfile
           localStorage.setItem('token', data.token)
           localStorage.setItem('user_name', data.user.nama || data.user.name)
           localStorage.setItem('user_email', data.user.email)
           localStorage.setItem('user_username', data.user.username || '')
           localStorage.setItem('role', 'user') 
           
-          // Pop-up sukses estetik warna marun
           Swal.fire({
             icon: 'success',
             title: 'Registrasi Berhasil!',
@@ -83,7 +80,7 @@ export default function Register() {
         Swal.fire({
           icon: 'error',
           title: 'Koneksi Terputus',
-          text: 'Pastikan server backend Laravel Anda sudah aktif!',
+          text: 'Pastikan server backend Laravel Railway Anda sudah aktif!',
           confirmButtonColor: '#6B0F1A',
         })
       }
@@ -98,9 +95,11 @@ export default function Register() {
     },
   })
 
+  // Handle Perubahan Input Form
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value })
+    
     if (name === 'password') {
       if (value.length === 0) setPasswordStrength(0)
       else if (value.length < 4) setPasswordStrength(1)
@@ -113,11 +112,10 @@ export default function Register() {
   const strengthLabel = ['', 'Lemah', 'Cukup', 'Sedang', 'Kuat']
   const strengthColor = ['', '#C0392B', '#E67E22', '#F1C40F', '#2D6A4F']
 
-  // ===== 3. LOGIKA REGISTER MANUAL + SWEETALERT2 =====
+  // ===== 2. LOGIKA REGISTER MANUAL =====
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // ===== UPDATE VALIDASI: Pastikan username dan no_hp ikut dicek =====
     if (!formData.nama || !formData.username || !formData.email || !formData.no_hp || !formData.password || !formData.konfirmasi) {
       Swal.fire({ icon: 'warning', title: 'Opps..', text: 'Semua field wajib diisi!', confirmButtonColor: '#6B0F1A' })
       return
@@ -132,7 +130,6 @@ export default function Register() {
     }
 
     try {
-      // Loading spinner untuk register manual
       Swal.fire({
         title: 'Membuat Akun...',
         text: 'Sedang mendaftarkan data diri Anda',
@@ -140,7 +137,6 @@ export default function Register() {
         didOpen: () => { Swal.showLoading() }
       })
 
-      // ===== SAKTI: Diubah mengarah ke /api/register (Bukan auth/google lagi) =====
       const response = await fetch('https://smartspend-be-production.up.railway.app/api/register', {
         method: 'POST',
         headers: {
@@ -159,7 +155,6 @@ export default function Register() {
       const data = await response.json()
 
       if (response.ok) {
-        // DISINKRONKAN: Cadangkan data pendaftaran lokal agar langsung ter-render di UserProfile sebelum fetch backend selesai
         localStorage.setItem('user_name', formData.nama)
         localStorage.setItem('user_username', formData.username)
         localStorage.setItem('user_email', formData.email)
@@ -173,9 +168,14 @@ export default function Register() {
           timerProgressBar: true,
           iconColor: '#6B0F1A'
         })
-        setTimeout(() => navigate('/'), 2000) // Mengarah ke halaman login utama Anda
+        setTimeout(() => navigate('/'), 2000) 
       } else {
-        Swal.fire({ icon: 'error', title: 'Gagal Registrasi', text: data.message || 'Terjadi kesalahan saat mendaftar.', confirmButtonColor: '#6B0F1A' })
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Gagal Registrasi', 
+          text: data.message || 'Terjadi kesalahan saat mendaftar.', 
+          confirmButtonColor: '#6B0F1A' 
+        })
       }
 
     } catch (err) {
@@ -239,8 +239,6 @@ export default function Register() {
 
           {/* Konten Tengah */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 20px' }}>
-            
-            {/* Icon Besar */}
             <div style={{
               width: '120px', height: '120px',
               backgroundColor: 'rgba(201,168,76,0.15)',
@@ -327,7 +325,7 @@ export default function Register() {
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   NAMA LENGKAP
                 </label>
-                <input type="text" name="nama" placeholder="Masukkan nama lengkap"
+                <input type="text" name="nama" placeholder="Masukkan nama lengkap" required
                   value={formData.nama} onChange={handleChange} style={inputStyle} />
               </div>
 
@@ -336,7 +334,7 @@ export default function Register() {
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   USERNAME
                 </label>
-                <input type="text" name="username" placeholder="Masukkan username unik"
+                <input type="text" name="username" placeholder="Masukkan username unik" required
                   value={formData.username} onChange={handleChange} style={inputStyle} />
               </div>
 
@@ -345,7 +343,7 @@ export default function Register() {
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   ALAMAT EMAIL
                 </label>
-                <input type="email" name="email" placeholder="contoh@email.com"
+                <input type="email" name="email" placeholder="contoh@email.com" required
                   value={formData.email} onChange={handleChange} style={inputStyle} />
               </div>
 
@@ -354,7 +352,7 @@ export default function Register() {
                 <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>
                   NOMOR HP
                 </label>
-                <input type="tel" name="no_hp" placeholder="Contoh: 08123456789"
+                <input type="tel" name="no_hp" placeholder="Contoh: 08123456789" required
                   value={formData.no_hp} onChange={handleChange} style={inputStyle} />
               </div>
 
@@ -364,7 +362,7 @@ export default function Register() {
                   PASSWORD
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <input type={showPassword ? 'text' : 'password'} name="password"
+                  <input type={showPassword ? 'text' : 'password'} name="password" required
                     placeholder="Minimal 8 karakter" value={formData.password} onChange={handleChange}
                     style={{ ...inputStyle, padding: '0 48px 0 16px' }} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -398,7 +396,7 @@ export default function Register() {
                   KONFIRMASI PASSWORD
                 </label>
                 <div style={{ position: 'relative' }}>
-                  <input type={showConfirm ? 'text' : 'password'} name="konfirmasi"
+                  <input type={showConfirm ? 'text' : 'password'} name="konfirmasi" required
                     placeholder="Ulangi password kamu" value={formData.konfirmasi} onChange={handleChange}
                     style={{ ...inputStyle, padding: '0 48px 0 16px' }} />
                   <button type="button" onClick={() => setShowConfirm(!showConfirm)}
@@ -408,34 +406,33 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Checkbox dengan Link Pemicu Pop-up Modal */}
+              {/* Checkbox Perbaikan (Dihapus onClick pembungkusnya agar tidak bentrok) */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '24px', padding: '14px', backgroundColor: '#FFF8F0', borderRadius: '10px', border: '1px solid #FDE8CC' }}>
                 <input 
                   type="checkbox" 
                   name="setuju" 
+                  id="setuju-checkbox"
                   checked={formData.setuju} 
                   onChange={handleChange}
-                  style={{ marginTop: '2px', accentColor: '#6B0F1A', width: '16px', height: '16px', cursor: 'pointer', position: 'relative', zIndex: 2 }} 
+                  style={{ marginTop: '2px', accentColor: '#6B0F1A', width: '16px', height: '16px', cursor: 'pointer' }} 
                 />
-                <span style={{ fontSize: '13px', color: '#6B7280', lineHeight: '1.6', fontWeight: '400', position: 'relative', zIndex: 2 }}>
+                <label htmlFor="setuju-checkbox" style={{ fontSize: '13px', color: '#6B7280', lineHeight: '1.6', fontWeight: '400', cursor: 'pointer' }}>
                   Saya menyetujui{' '}
                   <span 
-                    onClick={(e) => { e.stopPropagation(); setShowSK(true); }} 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowSK(true); }} 
                     className="modal-link"
-                    style={{ position: 'relative', zIndex: 3 }}
                   >
                     Syarat & Ketentuan
                   </span>
                   {' '}serta{' '}
                   <span 
-                    onClick={(e) => { e.stopPropagation(); setShowPrivasi(true); }} 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivasi(true); }} 
                     className="modal-link"
-                    style={{ position: 'relative', zIndex: 3 }}
                   >
                     Kebijakan Privasi
                   </span>
                   {' '}SmartSpend
-                </span>
+                </label>
               </div>
 
               {/* Tombol Daftar */}
@@ -498,17 +495,17 @@ export default function Register() {
       {/* ==================== POP-UP MODAL SYARAT & KETENTUAN ==================== */}
       {showSK && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#FFFFFF', padding: '36px', borderRadius: '16px', maxWidth: '500px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '36px', borderRadius: '16px', maxWidth: '500px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
             <h3 style={{ color: '#6B0F1A', fontWeight: '700', fontSize: '20px', marginBottom: '16px', borderBottom: '2px solid #F3F4F6', paddingBottom: '10px' }}>Syarat & Ketentuan</h3>
             <div style={{ color: '#4B5563', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px', textAlign: 'left' }}>
               <p style={{ marginBottom: '12px', fontWeight: '500' }}>Selamat datang di SmartSpend. Dengan mendaftar, Anda menyetujui seluruh ketentuan layanan kami:</p>
               <ol style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Keamanan Akun:</strong> Anda bertanggung jawab penuh untuk menjaga kerahasiaan password dan aktivitas yang terjadi pada akun Anda.</li>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Akurasi Data Finansial:</strong> Layanan perencanaan anggaran ini sepenuhnya bergantung pada data finansial (penghasilan dan pengeluaran) yang Anda berikan secara mandiri.</li>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Batasan Penggunaan:</strong> Fitur SmartSpend disediakan hanya untuk tujuan manajemen keuangan pribadi dan edukasi perencanaan anggaran non-komersial.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Keamanan Akun:</strong> Anda bertanggung jawab penuh untuk menjaga kerahasiaan password.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Akurasi Data Finansial:</strong> Layanan bergantung pada data finansial yang Anda masukkan mandiri.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Batasan Penggunaan:</strong> Fitur disediakan hanya untuk edukasi perencanaan anggaran personal.</li>
               </ol>
             </div>
-            <button type="button" onClick={() => setShowSK(false)} style={{ backgroundColor: '#6B0F1A', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%', boxShadow: '0 4px 12px rgba(107,15,26,0.2)' }}>
+            <button type="button" onClick={() => setShowSK(false)} style={{ backgroundColor: '#6B0F1A', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>
               Saya Mengerti & Tutup
             </button>
           </div>
@@ -518,17 +515,17 @@ export default function Register() {
       {/* ==================== POP-UP MODAL KEBIJAKAN PRIVASI ==================== */}
       {showPrivasi && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#FFFFFF', padding: '36px', borderRadius: '16px', maxWidth: '500px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '36px', borderRadius: '16px', maxWidth: '500px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
             <h3 style={{ color: '#6B0F1A', fontWeight: '700', fontSize: '20px', marginBottom: '16px', borderBottom: '2px solid #F3F4F6', paddingBottom: '10px' }}>Kebijakan Privasi</h3>
             <div style={{ color: '#4B5563', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px', textAlign: 'left' }}>
               <p style={{ marginBottom: '12px', fontWeight: '500' }}>Privasi Anda adalah prioritas utama SmartSpend. Berikut cara kami memperlakukan data Anda:</p>
               <ol style={{ paddingLeft: '20px', margin: 0 }}>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Penyimpanan Aman:</strong> Seluruh data sensitif seperti password dienkripsi secara aman. Data profil risiko dan finansial disimpan eksklusif pada server aman kami.</li>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Kerahasiaan Mutlak:</strong> Kami menjamin tidak akan pernah menjual, menyewakan, atau mendistribusikan riwayat keuangan dan data pribadi Anda kepada pihak ketiga mana pun.</li>
-                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Penggunaan Data:</strong> Data Anda murni diolah oleh algoritma SmartSpend untuk menyajikan kalkulasi budget planner dan spending alert yang akurat.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Penyimpanan Aman:</strong> Seluruh data sensitif seperti password dienkripsi secara aman.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Kerahasiaan Mutlak:</strong> Kami menjamin tidak akan pernah menjual data Anda ke pihak ketiga.</li>
+                <li style={{ marginBottom: '10px' }}><strong style={{ color: '#1F2937' }}>Penggunaan Data:</strong> Data diolah murni untuk kalkulasi budget planner yang akurat.</li>
               </ol>
             </div>
-            <button type="button" onClick={() => setShowPrivasi(false)} style={{ backgroundColor: '#6B0F1A', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%', boxShadow: '0 4px 12px rgba(107,15,26,0.2)' }}>
+            <button type="button" onClick={() => setShowPrivasi(false)} style={{ backgroundColor: '#6B0F1A', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>
               Saya Mengerti & Tutup
             </button>
           </div>
