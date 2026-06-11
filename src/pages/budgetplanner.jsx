@@ -86,9 +86,9 @@ export default function BudgetPlanner() {
     if (localName) setNamaUser(localName)
   }, [])
 
-  // 1. AMBIL PEMASUKAN RIIL DARI RISK PROFILE BACKEND
+  // AMBIL DATA PEMASUKAN SECARA OTOMATIS SAAT HALAMAN DI-LOAD
   useEffect(() => {
-    const loadPemasukanDariRiskProfile = async () => {
+    const fetchOtomatisPemasukan = async () => {
       try {
         const token = localStorage.getItem('token')
         if (!token) return
@@ -102,41 +102,16 @@ export default function BudgetPlanner() {
         const data = await response.json()
 
         if (response.ok && data) {
-          const pemasukanRiil = data.pendapatan || data.pemasukan || 0
-          setPemasukan(parseInt(pemasukanRiil))
+          // Cek data budget tersimpan dulu, jika tidak ada fallback ke pendapatan risk profile
+          const nominalPemasukan = data.pemasukan || data.pendapatan || 0
+          setPemasukan(parseInt(nominalPemasukan))
         }
       } catch (err) {
-        console.log('Gagal load pemasukan riil:', err)
+        console.log('Gagal memuat data pemasukan otomatis:', err)
       }
     }
 
-    loadPemasukanDariRiskProfile()
-  }, [])
-
-  // 2. LOAD DATA ANGGARAN JIKA USER SUDAH PERNAH MENGISI SEBELUMNYA
-  useEffect(() => {
-    const loadSavedBudget = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) return
-
-        const response = await fetch('https://smartspend-be-production.up.railway.app', {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          }
-        })
-        const data = await response.json()
-
-        if (response.ok && data && data.pemasukan) {
-          setPemasukan(data.pemasukan)
-        }
-      } catch (err) {
-        console.log('Gagal load saved budget:', err)
-      }
-    }
-
-    loadSavedBudget()
+    fetchOtomatisPemasukan()
   }, [])
 
   // Membersihkan titik saat diketik agar state tetap menyimpan angka murni (integer)
@@ -331,7 +306,7 @@ export default function BudgetPlanner() {
             <Link to="/final-analyze" className="nav-link">Final Analyze</Link>
           </div>
 
-          {/* BLOCK NAV USER AVATAR (DIREVISI AGAR SINKRON DENGAN DASHBOARD) */}
+          {/* BLOCK NAV USER AVATAR */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ 
               width: '36px', 
@@ -341,14 +316,14 @@ export default function BudgetPlanner() {
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              overflow: 'hidden' // Mengunci gambar agar tetap bulat sempurna
+              overflow: 'hidden'
             }}>
               {avatarUser ? (
                 <img 
                   src={avatarUser} 
                   alt="Profile" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  onError={() => setAvatarUser(null)} // Jaga-jaga jika url avatar error/rusak, balik ke inisial huruf
+                  onError={() => setAvatarUser(null)}
                 />
               ) : (
                 <span style={{ color: MAROON, fontWeight: '700', fontSize: '13px' }}>
@@ -378,7 +353,7 @@ export default function BudgetPlanner() {
               <div style={{ width: '10px', height: '10px', backgroundColor: GOLD, borderRadius: '50%' }} />
               <h2 style={{ fontSize: '18px', fontWeight: '700', color: MAROON }}>Pemasukan Bulanan</h2>
             </div>
-            <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>TOTAL PEMASUKAN (DARI RISK PROFILE)</label>
+            <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '8px', color: '#374151', letterSpacing: '0.3px' }}>TOTAL PEMASUKAN (DARI RISK PROFILE / ANGGARAN)</label>
             <div style={{ position: 'relative', marginBottom: '16px' }}>
               <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: MAROON, fontWeight: '700', fontSize: '16px' }}>Rp</span>
               <input type="text" value={formatRp(pemasukan)} readOnly style={{ width: '100%', height: '52px', padding: '0 16px 0 48px', border: '1.5px solid #E5E7EB', borderRadius: '10px', fontSize: '16px', fontWeight: '600', color: '#1A1A1A', backgroundColor: '#F3F4F6', cursor: 'not-allowed' }} />
@@ -412,7 +387,7 @@ export default function BudgetPlanner() {
                   {item.icon}
                 </div>
                 
-                {/* Bagian Nama - Bisa Teks Biasa / Input Mode Edit */}
+                {/* Bagian Nama */}
                 <div style={{ flex: 1, paddingRight: '16px' }}>
                   {editMode.tab === activeTab && editMode.id === item.id ? (
                     <input
@@ -442,9 +417,8 @@ export default function BudgetPlanner() {
                   <p style={{ fontSize: '12px', color: '#9CA3AF' }}>Batas anggaran</p>
                 </div>
 
-                {/* Kolom Actions (Input Nominal, Edit, Delete) */}
+                {/* Kolom Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', fontSize: '13px', fontWeight: '500' }}>Rp</span>
                     <input
@@ -455,7 +429,6 @@ export default function BudgetPlanner() {
                     />
                   </div>
                   
-                  {/* Tombol Pensil (Edit) atau Centang (Save) */}
                   {editMode.tab === activeTab && editMode.id === item.id ? (
                     <button type="button" className="action-btn" onMouseDown={(e) => e.preventDefault()} onClick={() => setEditMode({ tab: null, id: null })} style={{ width: '42px', height: '42px', border: 'none', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#16A34A', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       ✔️
@@ -466,11 +439,9 @@ export default function BudgetPlanner() {
                     </button>
                   )}
 
-                  {/* Tombol Hapus */}
                   <button type="button" className="action-btn" onClick={() => handleHapus(activeTab, item.id)} style={{ width: '42px', height: '42px', border: 'none', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', cursor: 'pointer', fontSize: '24px', fontWeight: '400', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     ×
                   </button>
-
                 </div>
               </div>
             ))}
@@ -546,7 +517,7 @@ export default function BudgetPlanner() {
 
       {/* ===== ULTRA PREMIUM MODAL DESIGN ===== */}
       {isModalOpen && (
-        <div className="animate-fade" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+        <div className="animate-fade" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.3)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div className="animate-pop" style={{ backgroundColor: 'white', width: '440px', borderRadius: '24px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', border: '1px solid rgba(243, 244, 246, 0.8)' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -562,7 +533,7 @@ export default function BudgetPlanner() {
             <form onSubmit={handleSubmitKategoriBaru}>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#4B5563', marginBottom: '8px', letterSpacing: '0.5px' }}>NAMA LABELLING</label>
-                <input type="text" placeholder="Masukkan nama kategori baru..." value={inputNamaKategori} onChange={e => setInputNamaKategori(e.target.value)} required autoFocus style={{ width: '100%', height: '48px', padding: '0 16px', border: '1.5px solid #E5E7EB', borderRadius: '12px', fontSize: '14.5px', color: '#111827', transition: 'all 0.2s', boxSizing: 'border-box', backgroundColor: '#FAFAFA' }} />
+                <input type="text" placeholder="Masukkan nama kategori baru..." value={inputNamaKategori} onChange={e => setInputNamaKategori(e.target.value)} required autoFocus style={{ width: '100%', height: '48px', padding: '0 16px', border: '1.5px solid #E5E7EB', borderRadius: '12px', fontSize: '14.5px', color: '#111827', boxSizing: 'border-box', backgroundColor: '#FAFAFA' }} />
               </div>
 
               <div style={{ marginBottom: '28px' }}>
@@ -580,8 +551,8 @@ export default function BudgetPlanner() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, height: '48px', backgroundColor: '#F3F4F6', border: 'none', borderRadius: '12px', color: '#4B5563', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }}>Batal</button>
-                <button type="submit" style={{ flex: 1, height: '48px', backgroundColor: MAROON, border: 'none', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(107, 15, 26, 0.25)', transition: 'transform 0.2s' }}>+ Simpan Data</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, height: '48px', backgroundColor: '#F3F4F6', border: 'none', borderRadius: '12px', color: '#4B5563', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Batal</button>
+                <button type="submit" style={{ flex: 1, height: '48px', backgroundColor: MAROON, border: 'none', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(107, 15, 26, 0.25)' }}>+ Simpan Data</button>
               </div>
             </form>
           </div>
